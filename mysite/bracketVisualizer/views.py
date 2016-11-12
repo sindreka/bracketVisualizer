@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from urllib import request
 import re
+from .models import bracketModel
 
 # Create your views here.
 
@@ -29,9 +30,19 @@ def getImageFromCardName(card):
     img = re.search(expression,data.decode("utf-8"))
     return img.group(0)
 
-def navn(text):
+def getResults(text):
     cardTable = getInfoFromPost(text)
     results = []
     for line in cardTable:
         results.append([[line[0], line[2], getImageFromCardName(line[0])], [line[1], line[3], getImageFromCardName(line[1])]])
     return results
+
+def bracketViews(request):
+        brackets = bracketModel.objects.all()[0]
+
+        results = getResults(brackets)
+
+        context = {
+                'key': results,
+        }
+        return render(request,'bracketVisualizer/bracket.html',context = context)
