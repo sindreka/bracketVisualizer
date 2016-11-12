@@ -2,6 +2,7 @@ from django.shortcuts import render
 from urllib import request
 import re
 from .models import bracketModel
+import io
 
 # Create your views here.
 
@@ -38,7 +39,7 @@ def getResults(text):
     return results
 
 def bracketViews(request):
-        brackets = bracketModel.objects.all()[0]
+        brackets = io.StringIO(bracketModel.objects.all()[0].post)
 
         results = getResults(brackets)
 

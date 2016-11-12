@@ -10,14 +10,14 @@
 	<div>
 
 
-<table>
+<table align="center">
 {% for tableLine in key  %}
 	<tr>	
 	{% for tableElement in tableLine  %}
 		<th>
-		img src =" {{ tableElement.2 }} " alt= "{{ tableElement.0 }}" >
-		<h2> {{ tableElement.0 }} </h2><br>
-		<h3> {{ tableElement.1 }} </h3>
+		<img src =" {{ tableElement.2 }} " alt= "{{ tableElement.0 }}" >
+		<h2> {{ tableElement.0 }} </h2>
+		<h3> {{ tableElement.1 }}% </h3> <br>
 		</th>
 	{% endfor %}
 	</tr>
