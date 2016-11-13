@@ -4,10 +4,7 @@ from urllib import request
 
 # Create your models here.
 
-class bracketModel(models.Model):
-	title = models.CharField(max_length = 200)
-	post = 	models.TextField()
-	
+
 
 class AppURLopener(request.FancyURLopener):
     version = "User-Agent:bracketVisualizer:v0.2 (by /u/schpere)"
@@ -29,3 +26,22 @@ def getResults(batchNumber):
         if comment['data']['body'].count('%') >= 32:
             post = comment['data']['body']
             return post[post.find("*")+2:].split("\n* ")
+
+# Putt resten av tingene her?
+
+
+class bracketMatch(models.Model):
+    batch = models.ForeignKey(bracketBatch)
+
+    winnerURL = models.CharField(max_length = 200)
+    winnerName = models.CharField(max_length = 200)
+    winnerProsent = models.DecimalField(decimal_laces = 1)
+
+    loserURL = models.CharField(max_length = 200)
+    loserName = models.CharField(max_length = 200)
+    loserProsent = models.DecimalField(decimal_laces = 1)
+
+class bracketBatch(models.Model):
+    batchNumber = models.IntegerField();
+
+    
