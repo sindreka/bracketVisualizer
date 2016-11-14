@@ -1,6 +1,9 @@
 # Import lots of stuff
-
+import django
+from urllib import request
 # This function must run every two hours.
+from bracketVisualizer.model import bracketBatch, bracketMatch
+
 
 class AppURLopener(request.FancyURLopener):
     version = "User-Agent:bracketVisualizer:v0.2 (by /u/schpere)"
@@ -57,7 +60,10 @@ def getResults(text):
 
 def addToDatabase():
     # Get batchNumber
-    batchNumber= bracketBatch.objects.all().order_by('-id')[0].batchNumber
+    try:
+        batchNumber= bracketBatch.objects.all().order_by('-id')[0].batchNumber
+    except:
+        batchNumber = 1
 
     # Check if new batchResults are avilable
     results = getBatchResults(batchNumber)
@@ -68,7 +74,7 @@ def addToDatabase():
     B.save()
     for row in resultmatrix:
         # Add results to matchResult
-        match = bracketMatch(batch=B, winnerURL = row[0][1], winnerName = row[0][1], winnerProsent = row[0][1]
+        match = bracketMatch(batch=B, winnerURL = row[0][1], winnerName = row[0][1], winnerProsent = row[0][1],
                                        loserURL = row[0][1],  loserName = row[1][1],  loserProsent = row[1][1])
         match.save()
         #del match

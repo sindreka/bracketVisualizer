@@ -27,7 +27,12 @@ def getResults(batchNumber):
             post = comment['data']['body']
             return post[post.find("*")+2:].split("\n* ")
 
-# Putt resten av tingene her?
+# Putt resten av tingene her
+
+
+class bracketBatch(models.Model):
+    batchNumber = models.IntegerField();
+
 
 
 class bracketMatch(models.Model):
@@ -35,13 +40,11 @@ class bracketMatch(models.Model):
 
     winnerURL = models.CharField(max_length = 200)
     winnerName = models.CharField(max_length = 200)
-    winnerProsent = models.DecimalField(decimal_laces = 1)
+    winnerProsent = models.DecimalField(decimal_places = 1,max_digits = 3)
 
     loserURL = models.CharField(max_length = 200)
     loserName = models.CharField(max_length = 200)
-    loserProsent = models.DecimalField(decimal_laces = 1)
+    loserProsent = models.DecimalField(decimal_places = 1,max_digits = 3)
 
-class bracketBatch(models.Model):
-    batchNumber = models.IntegerField();
 
     

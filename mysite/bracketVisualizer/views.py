@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from urllib import request
 import re
-from .models import bracketModel
+from .models import bracketMatch, bracketBatch
 import io
 
 # Create your views here.
@@ -10,11 +10,11 @@ import io
 
 
 def bracketViews(request):
-        brackets = io.StringIO(bracketModel.objects.all()[0].post)
+        brackets = bracketBatch.objects.all()
 
-        results = getResults(brackets)
+        #results = getResults(brackets)
 
         context = {
-                'key': results,
+                'key': brackets,
         }
         return render(request,'bracketVisualizer/bracket.html',context = context)

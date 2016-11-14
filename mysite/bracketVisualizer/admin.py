@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import bracketModel
+from .models import bracketBatch, bracketMatch
 
 #class bracketAdmin(admin.ModelAdmin):
 #	fieldset = [
@@ -9,5 +9,6 @@ from .models import bracketModel
 #		(None, {'fields': ['post']}),		
 #	]
 
-admin.site.register(bracketModel)
+admin.site.register(bracketBatch)
+admin.site.register(bracketMatch)
 
