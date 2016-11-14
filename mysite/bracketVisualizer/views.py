@@ -10,8 +10,8 @@ import io
 
 
 def bracketViews(request):
-        brackets = bracketBatch.objects.all()
-
+#        brackets = bracketBatch.objects.all()
+        brackets = bracketMatch.objects.all()
         #results = getResults(brackets)
 
         context = {
