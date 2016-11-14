@@ -7,34 +7,13 @@
 </head>
 
 <body class="body" style="background-color:#f6f6f6">
-	<div>
-
-
-<table width="500" border="0" cellpadding="5">
-{{ key }}
-{% for tableLine in key  %}
-{{ tableLine }}
-	<tr>	
-		<td align="center" valign="center">
-			<img src =" {{ tableLine.winnerURL }} " alt= "{{ tableElement.winnerName }}" >
-			<br />
-			{{ tableLine.winnerName }}
-			{{ tableLine.winnerProsent }}%
-		</td>
-
-		<td align="center" valign="center">
-			<img src =" {{ tableLine.loserURL }} " alt= "{{ tableLine.loserName }}" >
-			<br /> {{ tableLine.loserName }}
-			{{ tableLine.loserProsent }}%  <br>
-		</td>
-
-	</tr>
-{% endfor %}
-
-
-<table>
-
-	</div>
+    <div>
+        <table width="500" border="0" cellpadding="5">
+            {% for tableLine in key  %}
+                <th><a href="{{ tableLine.batchNumber }}"> Batch {{ tableLine.batchNumber }} results </a></th>
+            {% endfor %}
+        </table>
+    </div>
 </body>
 
 </html>

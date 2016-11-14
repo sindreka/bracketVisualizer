@@ -13,7 +13,7 @@ from bracketVisualizer.models import bracketBatch, bracketMatch
 
 
 class AppURLopener(request.FancyURLopener):
-    version = "User-Agent:bracketVisualizer:v0.2 (by /u/schpere)"
+    version = "User-Agent:bracketVisualizer:v0.3 (by /u/schpere)"
  
 
 
@@ -23,11 +23,14 @@ def getBatchResults(batchNumber):
     url = "http://reddit.com/r/mtgbracket.json"
     source = request.urlopen(url)
     posts = json.load(source)["data"]["children"]
-    print(posts)
+    #print(posts)
     for post in posts:
         if post['data']['title'] == "Batch " + batchNumber + " results":
             url = "http://reddit.com" + post['data']['permalink']
             break
+    else:
+        raise Exception("No new batch found")
+        return -1
     source = request.urlopen(url + ".json")
     comments = json.load(source)[1]['data']['children']
     print(comments)
@@ -36,6 +39,7 @@ def getBatchResults(batchNumber):
             post = comment['data']['body']
             return post[post.find("*")+2:].split("\n* ")
     raise Exception("Bøøøø")
+    return -1
 
 def getInfoFromLine(line):
     info = line.split(" defeats ")

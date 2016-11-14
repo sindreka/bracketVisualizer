@@ -6,32 +6,10 @@ from urllib import request
 
 
 
-class AppURLopener(request.FancyURLopener):
-    version = "User-Agent:bracketVisualizer:v0.2 (by /u/schpere)"
- 
-
-def getResults(batchNumber):
-    batchNumber = str(batchNumber)
-    request._urlopener = AppURLopener
-    url = "http://reddit.com/r/mtgbracket.json"
-    source = urllib.urlopen(url)
-    posts = json.load(source)["data"]["children"]
-    for post in posts:
-        if post['data']['title'] == "Batch " + batchNumber + " results":
-            url = "http://reddit.com" + post['data']['permalink']
-            break
-    source = urllib.urlopen(url + ".json")
-    comments = json.load(source)[1]['data']['children']
-    for comment in comments:
-        if comment['data']['body'].count('%') >= 32:
-            post = comment['data']['body']
-            return post[post.find("*")+2:].split("\n* ")
-
-# Putt resten av tingene her
-
-
 class bracketBatch(models.Model):
     batchNumber = models.IntegerField();
+    def __str__(self):
+        return "BatchNumber " + str(self.batchNumber)
 
 
 
@@ -45,6 +23,8 @@ class bracketMatch(models.Model):
     loserURL = models.CharField(max_length = 200)
     loserName = models.CharField(max_length = 200)
     loserProsent = models.DecimalField(decimal_places = 1,max_digits = 3)
+    def __str__(self):
+        return self.winnerName + " vs " + self.loserName
 
 
     

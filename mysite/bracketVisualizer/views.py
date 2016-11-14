@@ -7,14 +7,17 @@ import io
 # Create your views here.
 
 
-
+def batchViews(request, bracketBatch_batchNumber):
+    matches = bracketMatch.objects.filter(batch__batchNumber=bracketBatch_batchNumber)
+    context = {
+        'key': matches,
+    }
+    return render(request,'bracketVisualizer/batch.html', context = context)
 
 def bracketViews(request):
-#        brackets = bracketBatch.objects.all()
-        brackets = bracketMatch.objects.all()
-        #results = getResults(brackets)
+    brackets = bracketBatch.objects.all()
 
-        context = {
-                'key': brackets,
-        }
-        return render(request,'bracketVisualizer/bracket.html',context = context)
+    context = {
+        'key': brackets,
+    }
+    return render(request,'bracketVisualizer/bracket.html', context = context)
