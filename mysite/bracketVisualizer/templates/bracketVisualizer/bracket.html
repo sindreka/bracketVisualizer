@@ -10,16 +10,23 @@
 	<div>
 
 
-<table align="center">
+<table width="500" border="0" cellpadding="5">
+
 {% for tableLine in key  %}
 	<tr>	
-	{% for tableElement in tableLine  %}
-		<th>
-		<img src =" {{ tableElement.2 }} " alt= "{{ tableElement.0 }}" >
-		<h2> {{ tableElement.0 }} </h2>
-		<h3> {{ tableElement.1 }}% </h3> <br>
-		</th>
-	{% endfor %}
+		<td align="center" valign="center">
+			<img src =" {{ tableLine.winnerURL }} " alt= "{{ tableElement.winnerName }}" >
+			<br />
+			{{ tableLine.winnerName }}
+			{{ tableLine.winnerProsent }}%
+		</td>
+
+		<td align="center" valign="center">
+			<img src =" {{ tableLine.loserURL }} " alt= "{{ tableLine.loserName }}" >
+			<br /> {{ tableLine.loserName }}
+			{{ tableLine.loserProsent }}%  <br>
+		</td>
+
 	</tr>
 {% endfor %}
 
