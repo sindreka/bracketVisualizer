@@ -6,14 +6,17 @@ from django.core.management.base import BaseCommand
 #import django
 #django.setup()
 from urllib import request
+import re
 import simplejson as json
 
-# This function must run every two hours.
+
+
+# This function must run periodically.
 from bracketVisualizer.models import bracketBatch, bracketMatch
 
 
 class AppURLopener(request.FancyURLopener):
-    version = "User-Agent:bracketVisualizer:v0.3 (by /u/schpere)"
+    version = "User-Agent:MTGcrsdasdasdawler:v0.74asd2 (by /u/harry_THEada_potter)"
  
 
 
@@ -33,7 +36,7 @@ def getBatchResults(batchNumber):
         return -1
     source = request.urlopen(url + ".json")
     comments = json.load(source)[1]['data']['children']
-    print(comments)
+    #print(comments)
     for comment in comments:
         if comment['data']['body'].count('%') >= 32:
             post = comment['data']['body']
@@ -63,8 +66,9 @@ def getImageFromCardName(card):
     infoSite = "http://magiccards.info/query?q=" + card.replace(' ', '+').replace('ö', 'o') + "&v=card&s=cname"
     page = request.urlopen(infoSite)
     data = page.read()
-    expression = '(?<=\<img src=")http://magiccards.info/scans/en/[a-z,0-9]{1,3}/[0-9]{0,3}.jpg(?="\s*alt="' + card + ')'
+    expression = '(?<=\<img src=")http://magiccards.info/scans/en/[a-z,0-9]{1,10}/[a-z,0-9]{0,10}.jpg(?="\s*alt="' + card + ')'
     img = re.search(expression, data.decode("utf-8"))
+    print(img)
     return img.group(0)
 
 def getResults(text):
@@ -79,27 +83,24 @@ def addToDatabase():
     # Get batchNumber
     try:
         batchNumber= bracketBatch.objects.all().order_by('-id')[0].batchNumber
-    except:
+    except IndexError:
         batchNumber = 0
     print(batchNumber)
     #return
     # Check if new batchResults are avilable
-    results = getBatchResults(batchNumber+1)
+    results = getBatchResults(batchNumber+1) # add error
     print(results)
-    resultMatrix = getResults(results)
-
+    resultMatrix = getResults(results) # add error
+    print(resultMatrix)
     # Add result key to matchBatch
-    B = bracketBatch(batchNumber+1)
+    B = bracketBatch(batchNumber = batchNumber+1)
     B.save()
-    for row in resultmatrix:
+    for row in resultMatrix:
         # Add results to matchResult
-        match = bracketMatch(batch=B, winnerURL = row[0][1], winnerName = row[0][1], winnerProsent = row[0][1],
-                                       loserURL = row[0][1],  loserName = row[1][1],  loserProsent = row[1][1])
+        match = bracketMatch(batch=B, winnerURL = row[0][2], winnerName = row[0][0], winnerProsent = row[0][1],
+                                       loserURL = row[1][2],  loserName = row[1][0],  loserProsent = row[1][1])
         match.save()
         #del match
-
-
-
 
 
 class Command(BaseCommand):

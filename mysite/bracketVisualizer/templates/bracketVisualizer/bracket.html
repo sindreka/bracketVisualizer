@@ -10,7 +10,9 @@
     <div>
         <table width="500" border="0" cellpadding="5">
             {% for tableLine in key  %}
-                <th><a href="{{ tableLine.batchNumber }}"> Batch {{ tableLine.batchNumber }} results </a></th>
+                <tr>
+                    <th><a href="{{ tableLine.batchNumber }}"> Batch {{ tableLine.batchNumber }} results </a></th>
+                </tr>
             {% endfor %}
         </table>
     </div>
