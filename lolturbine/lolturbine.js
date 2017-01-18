@@ -5,11 +5,25 @@ var reinforcer;
 var clickRadius = 40;
 var mouseOffsetX = 15;
 var mouseOffsetY = - 10;
+var atk;
+var def;
 
 var player = {
     color : "red",
     troopsDue : 3,
-    stage : 1
+    stage : 1,
+    placeTroops : function() {
+        if ( this.troopsDue > 0 ) {
+            clicked = click();
+            if ( clicked && clicked.owner == this.color ) {
+                clicked.troops++;
+                this.troopsDue--;
+            }
+        }
+        else {
+            this.stage = 2;
+        }
+    }
 }
 
 function startGame() {
@@ -78,34 +92,36 @@ function updateGameArea() {
     myGameArea.clear();
     myBackground.update();
 
+    if ( player.stage == 1 ) { player.placeTroops(); }
+
     if ( attacker ) {
+        ctx.beginPath();
         ctx.lineWidth=10;
         ctx.globalAlpha = .50;
         ctx.strokeStyle = player.color;
-        ctx.beginPath();
+        ctx.fillStyle = player.color;
         ctx.arc( attacker.x + mouseOffsetX, attacker.y + mouseOffsetY, clickRadius, 0, 2 * Math.PI );
         ctx.stroke();
         ctx.globalAlpha = 1;
     }
 
-    drawDice([1,2,3],[4,5,6], "orange" );
+    if ( atk && def ) {
+        drawDice( atk, def, "blue" );
+    }
 
-    for (i = 0; i < nations.length ; i++) { 
+    for (i = 0; i < nations.length ; i++) {
         drawText(nations[i].troops,nations[i].owner,nations[i].x,nations[i].y);
     }
 
-    if ( player.stage == 1 && player.troopsDue == 0 ) { player.stage = 2 }
 
     if ( clicked = click() ) {
-        if ( player.stage == 1 && clicked.owner == player.color ) {
-            clicked.troops ++;
-            player.troopsDue --;
-        }
 
-        else if ( player.stage == 2 ){
+        if ( player.stage == 2 ){
             if ( clicked.owner == player.color && clicked.troops > 1 ) {
                 console.log("Who is attacking?");
                 attacker = clicked;
+                atk = null;
+                def = null;
             }
             else if ( clicked.owner != player.color && attacker && ~attacker.borders.indexOf(clicked.id) ) {
                 console.log("Attack!");
@@ -164,25 +180,35 @@ function click() {
 
 function drawDice( atk, def, victim ) {
     var x = 10;
-    var y = 5;
+    var y = myBackground.height + 5;
     var dieSize = 30;
     for (i = 0 ; i < atk.length ; i++ ) {
+        if ( def[i] && atk[i] > def[i] ) {
+            ctx.fillStyle = "#666699";
+            ctx.fillRect( x-3, y-3, dieSize + 6, dieSize + 6 );
+            //ctx.stroke();
+        }
         drawDie( atk[i], x, y, dieSize, player.color );
-        x += dieSize + 3;
+        x += dieSize + 10;
     }
     x += 15;
     for (i = 0 ; i < def.length ; i++ ) {
+        if ( atk[i] && def[i] >= atk[i] ) {
+            ctx.fillStyle = "#666699";
+            ctx.fillRect( x-3, y-3, dieSize + 6, dieSize + 6 );
+        }
         drawDie( def[i], x, y, dieSize, victim );
-        x += dieSize + 3;
+        x += dieSize + 10;
     }
 }
 
 function drawDie( num, x, y, dieSize, color ) {
     var dotSize = 2;
     ctx.fillStyle = color;
-    ctx.rect(x, y, dieSize, dieSize);
+    ctx.lineWidth = 2;
+    ctx.fillRect(x, y, dieSize, dieSize);
     ctx.stroke();
-    ctx.fillStyle = "black";
+    ctx.strokeStyle = "white";
     if ( num == 1 || num == 3 || num == 5 ) {
         ctx.rect( x + dieSize / 2 - dotSize / 2, y + dieSize / 2 - dotSize / 2, dotSize, dotSize );
     }
@@ -202,4 +228,3 @@ function drawDie( num, x, y, dieSize, color ) {
     }
     ctx.stroke();
 }
-
