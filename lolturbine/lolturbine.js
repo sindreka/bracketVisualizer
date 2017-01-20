@@ -14,42 +14,55 @@ var player = {
     troopsDue : 3,
     stage : 1,
     placeTroops : function() {
-        if ( this.troopsDue > 0 ) {
+        if ( this.troopsDue == 0 ) { this.stage = 2; }
+        else {
             clicked = click();
             if ( clicked && clicked.owner == this.color ) {
                 clicked.troops++;
                 this.troopsDue--;
             }
         }
-        else {
-            this.stage = 2;
-        }
     },
     attack : function () {
-        if ( atk && def ) { drawDice(atk, def, color); }
-        if ( attacker ) { markNation( attacker, this.color ); }
-        if ( reinforcer ) { markNation( reinforcer, "green" ); }
         clicked = click();
         if ( clicked ) {
-            if ( clicked.owner == this.color ) {
-                if ( reinforcer && victim && victim.owner == reinforcer.owner && victim == clicked ) {
-                    reinforcer.troops--;
-                    victim.troops++;
-                    atk = null;
-                    def = null;
-                    if ( reinforcer.troops < 2 ) { reinforcer = null; }
-                }
-                else if ( clicked.troops > 1 ) { 
-                    attacker = clicked;
-                    reinforcer = null;
-                }
+            if ( clicked.canAttack() ) {
+                if ( attacker ) { attacker.isAttacking = false; }
+                attacker = clicked;
+                attacker.isAttacking = true;
             }
-            else if ( attacker && ~attacker.borders.indexOf(clicked.id) ) { 
+            if ( attacker && attacker.canAttack(clicked) ) {
                 victim = clicked;
-                color = victim.owner;
-                attacker.assault(victim); 
-                if ( attacker && attacker.troops <= 1 ) { attacker = null; } 
+                attacker.assault(victim);
             }
+
+//        if ( atk && def ) { drawDice(atk, def, attacker, victim ); }
+//        if ( reinforcer ) { 
+//            markNation( reinforcer, "green" );
+//            infoAdvance(victim, reinforcer);
+//        } else { infoAdvance(); }
+//        if ( clicked ) {
+//            if ( clicked.owner == this.color ) {
+//                if ( reinforcer && victim && victim.owner == reinforcer.owner && victim == clicked ) {
+//                    reinforcer.troops--;
+//                    victim.troops++;
+//                    atk = null;
+//                    def = null;
+//                    if ( reinforcer.troops < 2 ) { reinforcer = null; }
+//                }
+//                else if ( clicked.troops > 1 ) { 
+//                    attacker = clicked;
+//                    reinforcer = null;
+//                }
+//            }
+//            else if ( attacker && ~attacker.borders.indexOf(clicked.id) ) { 
+//                victim = clicked;
+//                color = victim.owner;
+//                attacker.assault(victim); 
+//                if ( attacker && attacker.troops <= 1 ) { attacker = null; } 
+//            }
+//        }
+        
         }
     }
 }
@@ -57,28 +70,29 @@ var player = {
 function startGame() {
     gameBoard = new map(640,400,"maps/first.png");
 
-    nations[0] = new nation(0,13,"red",[1,2],73,99);
-    nations[1] = new nation(1,3,"blue",[0,2,3],203,216);
-    nations[2] = new nation(2,3,"red",[0,1,3],424,160);
-    nations[3] = new nation(3,3,"orange",[1,2],368,313);
+    nations[0] = new nation("Leftia",0,9,"red",[1,2],78,99);
+    nations[1] = new nation("Middletown",1,10,"blue",[0,2,3],208,216);
+    nations[2] = new nation("East worth",2,3,"red",[0,1,3],424,160);
+    nations[3] = new nation("South right",3,3,"orange",[1,2],368,313);
 
     myGameArea.start();
 }
 
-function nation(id,troops,owner,borders,x,y) {
+function nation(name,id,troops,owner,borders,x,y) {
+    this.name = name;
     this.id = id;
     this.troops = troops;
     this.owner = owner;
     this.borders = borders;
     this.x = x;
     this.y = y;
+    this.isAttacking = false;
     this.assault = function(victim) {
         numAttackers = Math.min(3,this.troops-1);
         numDefenders = Math.min(2,victim.troops);
-        console.log(numAttackers);
         atk = dieRoll(numAttackers);
         def = dieRoll(numDefenders);
-        drawDice( atk, def, "blue" );
+        //drawDice( atk, def, "blue" );
         if (atk[0] > def[0]) { victim.troops--; }
         else { this.troops--; }
         if (numAttackers > 1 && numDefenders > 1) {
@@ -93,13 +107,23 @@ function nation(id,troops,owner,borders,x,y) {
             attacker = null;
         }
     }
+    this.canAttack = function(victim) {
+        //return false;
+        if ( this.troops < 2 || this.owner != player.color ) { return false; }
+        for ( i = 0 ; i < this.borders.length ; i++ ) {
+            potentialVictim = nations[this.borders[i]];
+            if ( potentialVictim.owner != this.owner ) {
+                if ( victim == null || potentialVictim == victim ) { return true; }
+            }
+        } return false;
+    }
 }
 
 var myGameArea = {
     canvas : document.createElement("canvas"),
     start : function() {
         this.canvas.width = 640;
-        this.canvas.height = 600;
+        this.canvas.height = 450;
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.canvas.style.border = "1px solid";
@@ -121,11 +145,25 @@ var myGameArea = {
 function updateGameArea() {
     myGameArea.clear();
     gameBoard.update();
+    updateNations();
 
     if ( player.stage == 1 ) { player.placeTroops(); }
     if ( player.stage == 2 ) { player.attack(); }
 
 }
+
+function updateNations() {
+    for ( i = 0 ; i < nations.length ; i++ ) {
+        nation = nations[i];
+        drawText( nation.troops, nation.owner, nation.x, nation.y );
+        //console.log(nation.canAttack());
+        if ( nation.isAttacking && nation.canAttack() == false ) { nation.isAttacking = false; }
+        if ( nation.isAttacking ) { 
+            markNation( nation, "red" ); 
+        }
+    }
+}
+
 
 function map(width,height,file) {
     this.image = new Image();
@@ -134,15 +172,15 @@ function map(width,height,file) {
     this.height = height;
     this.update = function() {
         myGameArea.context.drawImage(this.image, 0, 0, this.width, this.height);
-        for ( i = 0; i < nations.length ; i++ ) {
-            drawText(nations[i].troops, nations[i].owner, nations[i].x, nations[i].y );
-        }
     }
 }
 
 function drawText(text, color, x, y) {
     myGameArea.context.font = "30px monospace";
     myGameArea.context.fillStyle = color;
+    if ( text >= 10 ) {
+        x -= 10;
+    }
     myGameArea.context.fillText(text, x, y);
 }
 
@@ -170,25 +208,27 @@ function click() {
     return false;
 }
 
-function drawDice( atk, def, victim ) {
+function drawDice( atk, def, agressor, victim ) {
     var x = 10;
     var y = gameBoard.height + 5;
     var dieSize = 30;
+    drawText(agressor.name, x, y - 15 );
     for (i = 0 ; i < atk.length ; i++ ) {
         if ( def[i] && atk[i] > def[i] ) {
             myGameArea.context.fillStyle = "#666699";
             myGameArea.context.fillRect( x-3, y-3, dieSize + 6, dieSize + 6 );
         }
-        drawDie( atk[i], x, y, dieSize, player.color );
+        drawDie( atk[i], x, y, dieSize, agressor.owner );
         x += dieSize + 10;
     }
     x += 15;
+    drawText(victim.name, x, y - 15 );
     for (i = 0 ; i < def.length ; i++ ) {
         if ( atk[i] && def[i] >= atk[i] ) {
             myGameArea.context.fillStyle = "#666699";
             myGameArea.context.fillRect( x-3, y-3, dieSize + 6, dieSize + 6 );
         }
-        drawDie( def[i], x, y, dieSize, victim );
+        drawDie( def[i], x, y, dieSize, victim.owner );
         x += dieSize + 10;
     }
 }
@@ -220,7 +260,7 @@ function drawDie( num, x, y, dieSize, color ) {
     myGameArea.context.stroke();
 }
 
-function markNation( nation, color) {
+function markNation( nation, color ) {
     myGameArea.context.lineWidth=10;
     myGameArea.context.globalAlpha = .50;
     myGameArea.context.strokeStyle = color;
@@ -230,3 +270,11 @@ function markNation( nation, color) {
     myGameArea.context.globalAlpha = 1;
 }
 
+function infoAdvance(to, from) {
+    if ( to == null && from == null ) {
+        document.getElementById("info-area").innerHTML = "";
+    }
+    else {
+        document.getElementById("info-area").innerHTML = "Click on " + to.name + " to advance troops, on " + from.name + " to stop.";
+    }
+}
