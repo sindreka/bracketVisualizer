@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link class="jsbin" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1/themes/base/jquery-ui.css" rel="stylesheet" type="text/css" />
+<script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+<script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
+</head>
+<body onload="setFields()" >
+
+<a href={% url 'lolturbine:index' %} > return to page </a>
+{% if text %}
+<h2>{{ text }} </h2>
+{% endif %}
+
+<table>
+
+<tr> <th>Set number of nations: </th> <th> <input id="nations" type="number" min=1 value=1 > </th>
+<tr> <th>Set number of continents: </th> <th> <input id="continents" type="number" min=1 value=1 > </th>
+<tr> <th><input type="submit" class="btn btn-default" value="submit" onclick="setFields()" /> </th> <th> </th> </tr>
+</table>
+
+
+
+<form action={% url 'lolturbine:addMap' %} method="POST">
+{% csrf_token %}
+<h2> Map name: </h2>
+<input type="text" name="map_name" id="map_name" required />
+<h2> Map picture: </h2>
+<input type="file" id="imageLoader" name="imageLoader"/>
+<div id="game"><div id="lolturbine"><canvas id="imageCanvas" height="0" width="0" ></canvas> </div> </div> <!-- style="height:0px;width:0px;" -->
+
+<p > <b id="x"> </b> <b id="y" > </b> </p>
+<h2> Register nations here: </h2>
+<table>
+<thead><tr> <th> Index </th> <th> Name </th> <th> Borders </th> <th> x </th> <th> y </th> </tr> </thead>
+<tbody  id="nationFields"> </tbody>
+</table>
+
+<h2> Register continents here: </h2>
+<table>
+<thead><tr> <th> Name </th> <th> Nations </th> <th> Bonus </th> </tr> </thead>
+<tbody  id="continentFields"> </tbody>
+</table>
+
+ <input type="submit" class="btn btn-default" value="submit"/>
+</form>
+
+
+<script>
+function setFields() {
+    var num_nations = document.getElementById("nations").value;
+    var nations = document.getElementById("nationFields")
+    while (nations.firstChild) {
+        nations.removeChild(nations.firstChild);
+    }
+    setNations(num_nations);
+
+    var num_continents = document.getElementById("continents").value;
+    var continents = document.getElementById("continentFields")
+    while (continents.firstChild) {
+        continents.removeChild(continents.firstChild);
+    }
+    setContinents(num_continents);
+}
+
+
+function setNations(value) {
+
+    for (i = 0; i < value ; i++) {
+        var nation = document.createElement("tr")
+
+        var current = document.createElement("th")
+        var index = document.createElement("input");
+        index.setAttribute('type',"number");
+        index.setAttribute('name',i.toString() + "index");
+        index.setAttribute('value',i);
+        index.setAttribute('id',i.toString() + "index");
+        current.appendChild(index);
+        nation.appendChild(current);
+
+        var current = document.createElement("th")
+        var name = document.createElement("input"); 
+        name.setAttribute('type',"text");
+        name.setAttribute('name',i.toString() + "name");
+        name.setAttribute('value',"");
+        name.setAttribute('id',i.toString() + "name");
+        current.appendChild(name)
+        nation.appendChild(current);
+
+        var current = document.createElement("th")
+        var border = document.createElement("input");
+        border.setAttribute('type',"text");
+        border.setAttribute('name',i.toString() + "border");
+        border.setAttribute('id',i.toString() + "border");
+        current.appendChild(border)
+        nation.appendChild(current);
+
+        var current = document.createElement("th")
+        var x = document.createElement("input");
+        x.setAttribute('type',"number");
+        x.setAttribute('name',i.toString() + "x");
+        x.setAttribute('id',i.toString() + "x");
+        x.setAttribute('onchange',"plot(this)");
+        current.appendChild(x);
+        nation.appendChild(current);
+
+        var current = document.createElement("th")
+        var y = document.createElement("input");
+        y.setAttribute('type',"number");
+        y.setAttribute('name',i.toString() + "y");
+        y.setAttribute('id',i.toString() + "y");
+        y.setAttribute('onchange',"plot(this)");
+        current.appendChild(y);
+        nation.appendChild(current);
+
+        document.getElementById("nationFields").appendChild(nation);
+
+
+    }
+}
+function setContinents(value) {
+
+    for (i = 0; i < value ; i++) {
+        var continent = document.createElement("tr")
+
+        var current = document.createElement("th")
+        var name = document.createElement("input");
+        name.setAttribute('type',"text");
+        name.setAttribute('name',"c" + i.toString() + "name");
+        name.setAttribute('value',"");
+        name.setAttribute('id',"c" + i.toString() + "name");
+        current.appendChild(name);
+        continent.appendChild(current);
+
+        var current = document.createElement("th")
+        var nations = document.createElement("input");
+        nations.setAttribute('type',"text");
+        nations.setAttribute('name',"c" + i.toString() + "nations");
+        nations.setAttribute('value',"");
+        nations.setAttribute('id',"c" + i.toString() + "nations");
+        current.appendChild(nations);
+        continent.appendChild(current);
+
+        var current = document.createElement("th")
+        var bonus = document.createElement("input");
+        bonus.setAttribute('type',"number");
+        bonus.setAttribute('name',"c" + i.toString() + "bonus");
+        bonus.setAttribute('id',"c" + i.toString() + "bonus");
+        current.appendChild(bonus);
+        continent.appendChild(current);
+
+        document.getElementById("continentFields").appendChild(continent);
+    }
+}
+</script>
+<script>
+var imageLoader = document.getElementById('imageLoader');
+imageLoader.addEventListener('change', start, false);
+var myBackground;
+var img = new Image();
+var indices = [];
+
+function start(e){
+    handleImage(e);
+    gameArea.start();
+}
+
+
+function handleImage(e){
+    var reader = new FileReader();
+    reader.onload = function(event){
+        img.onload = function(){
+            document.getElementById("imageCanvas").height = img.height;
+            document.getElementById("imageCanvas").width = img.width;
+            gameArea.context.drawImage(img,0,0,img.width,img.height); 
+        }
+        img.src = event.target.result;
+
+    }
+    reader.readAsDataURL(e.target.files[0]);    
+    
+}
+
+var gameArea = {
+	canvas: document.getElementById('imageCanvas'),
+	start : function() {
+
+        var canvas = document.getElementById('imageCanvas');
+        this.context = canvas.getContext('2d');
+
+        this.canvas.style.position = "relative";
+        this.canvas.style.border   = "1px solid";
+		this.interval = setInterval(updateGameArea,20);
+        
+        window.addEventListener('mousedown', function (e) {
+            var oldx = gameArea.x;
+            var oldy = gameArea.y;
+
+            if (e.pageX || e.pageY) { 
+                gameArea.x = e.pageX;
+                gameArea.y = e.pageY;
+            }
+            else { 
+                gameArea.x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft; 
+                gameArea.y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop; 
+            } 
+            gameArea.x -= gameArea.canvas.offsetLeft + 15;
+            gameArea.y -= gameArea.canvas.offsetTop;
+
+            if (gameArea.x < 0 || gameArea.y < 0 || 
+            gameArea.x > document.getElementById('imageCanvas').width ||  
+            gameArea.y > document.getElementById('imageCanvas').height ) {
+                gameArea.x = oldx;
+                gameArea.y = oldy;
+            }
+        })
+    },
+	clear: function() {
+		this.context.clearRect(0,0,this.canvas.width,this.canvas.height);
+	},
+}
+
+function updateGameArea(){
+gameArea.clear();
+gameArea.context.drawImage(img,0,0,img.width,img.height);
+drawText(gameArea.x,gameArea.y, 30, "red", "11");
+drawindices();
+
+if (gameArea.x){
+    document.getElementById("x").textContent = "x: " + gameArea.x.toString();
+    document.getElementById("y").textContent = "y: " + gameArea.y.toString();
+} else if (!gameArea.x) {
+    document.getElementById("x").textContent = "x: " ;
+    document.getElementById("y").textContent = "y: " ;
+}
+}
+
+function drawindices() {
+for (i = 0; i < indices.length; i++) {
+    drawText(indices[i][0],indices[i][1], 30, "red", indices[i][2]);
+}
+}
+
+function drawText(x,y,s,c,t){
+ctx = gameArea.context;
+ctx.fillStyle = c;
+ctx.font = "bold " + s.toString() + "px monospace";
+ctx.fillText(t, x, y);
+}
+
+function plot(object) {
+
+id = parseInt(object.id.slice(0,-1));
+
+if (document.getElementById(id+"x").value && document.getElementById(id.toString()+"y").value) {
+    x = parseInt(document.getElementById(id+"x").value);
+    y = parseInt(document.getElementById(id+"y").value);
+    for (i = 0; i < indices.length; i++) {
+        if (id == indices[i][2]) { 
+            indices[i]=[x,y,id]
+
+        }
+    }
+    indices[indices.length]=[x,y,id];
+}
+}
+</script>
+
+</form>
+
+</body>
+</html>
+
+
+
+

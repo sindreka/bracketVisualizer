@@ -19,4 +19,5 @@ from django.contrib import admin
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 	url(r'^bracket/', include("bracketVisualizer.urls")),
+    url(r'^lolturbine/', include("lolturbine.urls")),
 ]
