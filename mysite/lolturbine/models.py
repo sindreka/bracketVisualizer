@@ -40,7 +40,7 @@ class OngoingGame(models.Model):
 
     current_map = models.ForeignKey(TopographicalDescription, blank = True)
     num_players = models.IntegerField()
-    current_player = models.CharField(max_length = 200,default = "")
+    current_player = models.IntegerField(default = 150)
     time_per_move = models.IntegerField()
     time_since_last_move = models.DateTimeField(default = timezone.now)
     pub_date = models.DateTimeField(default = timezone.now)
@@ -65,27 +65,31 @@ class Player(models.Model):
     color = models.CharField(max_length = 200)
     user = models.ForeignKey(User)
     index = models.IntegerField()
+    nTroops = models.IntegerField(default = 0)
     spoils = models.CharField(max_length = 200, blank = True) # Skal inn etter hvert, hvordan fikser man dette?
     game = models.ForeignKey(OngoingGame)
     mission = models.CharField(max_length = 200, blank = True) # Skal inn etter hvert, men usikker på hvordan
+    new_troops = models.IntegerField(default = 0)
     def __str__(self):
         return "User %s in %s" % (self.user,self.game)
 
 class Comment(models.Model):
-    player = models.ForeignKey(Player)
+    player = models.ForeignKey(Player,blank = True)
     comment = models.CharField(max_length = 200)
     pub_date = models.DateTimeField(default = timezone.now)
     def __str__(self):
-        return "%s's comment: %s" % (self.user,self.comment)    
+        return "%s's comment: %s" % (self.player,self.comment) 
+    class Meta:
+        ordering = ['pub_date']   
 
 class NationInGame(models.Model):
     troops = models.IntegerField()
-    owner = models.ForeignKey(Player, blank = True)
+    owner = models.ForeignKey(Player, blank = True, null = True)
     area = models.ForeignKey(Nation)
     ongoing_game = models.ForeignKey(OngoingGame)
 
     def __str__(self):
-        return "%s's area %s has %i troops" % (self.owner,self.area.name,self.troops)
+        return "%s + %s" % (self.area, self.owner) #"%s's area %s has %i troops" % (self.owner,self.area.name,self.troops)
  
     
 

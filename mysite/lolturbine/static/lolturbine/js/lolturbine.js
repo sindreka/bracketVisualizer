@@ -151,6 +151,9 @@ function map(width,height,file) {
 function drawText(text, color, x, y) {
     myGameArea.context.font = "30px monospace";
     myGameArea.context.fillStyle = color;
+    if ( text >= 10 ) {
+        x -= 10;
+    }
     myGameArea.context.fillText(text, x, y);
 }
 

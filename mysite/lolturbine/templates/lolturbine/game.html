@@ -2,19 +2,432 @@
 <html>
 <head>
 {% load static %}
- <script src="{% static 'lolturbine/js/lolturbine.js' %}"></script>
+ <!-- <script src="{% static 'lolturbine/js/lolturbine.js' %}"></script> -->
+        <script>window.jQuery || document.write('<script src={% static "js/jquery-3.1.1.min.js"%}  ><\/script>')</script>
 </head>
-<body>
+<body onload="startGame( {{ game }}, {{ nations_in_game }}, {{ continents }}, {{ nations }}, {{ current_map }}, {{ players }}, {{ current_player }} )">
 
+<a href={% url 'lolturbine:index' %} > return to page </a>
+{% if text %}
+<h2>{{ text }} </h2>
+{% endif %}
 <div id="game"> <div id="lolturbine"> </div> </div>
+<div class="well"> 
+{% for comment in comments %}
+<p style="color:{{ comment.player.color }};">{{ comment.player.user }}: {{ comment.comment }} {{ comment.pub_date }}<p>
+{% endfor %}
+</div>
+<form method="POST">
+{% csrf_token %}
+<input id="chat" name="chat" type="text" >
+<input type="submit" id="submit" name="submit" class="btn btn-default" value="submit"/>
+</form>
+
+<button type="submit" id="s" name="s" class="btn btn-default" onclick="stageFour()"/>
+End battle stage
+</button>
+
+<form method = "POST" >
+<input type="submit" id="endturn" name="endturn" class="btn btn-default" value="End turn"/>
+</form>
+
+<script>
+
+var nations = [];
+var attacker;
+var victim;
+var color;
+var reinforcer;
+var clickRadius = 40;
+var mouseOffsetX = 15;
+var mouseOffsetY = - 10;
+var atk;
+var def;
+var from = 0;
+var to;
+var width;
+var height;
+var ppp;
+var pk;
+
+function stageFour() {
+ppp.stage = 3
+}
+
+
+function startGame(g,nig,c,n,m,p,cp) {
+
+console.log("g")
+console.log(g)
+console.log("nig")
+console.log(nig)
+console.log("c")
+console.log(c)
+console.log("n")
+console.log(n)
+console.log("m")
+console.log(m)
+console.log("p")
+console.log(p)
+console.log("cp")    
+console.log(cp)    
+pk = g[0].pk
+
+//console.log(n[0].fields.image)
+var img = new Image();
+img.src = "/static/lolturbine/maps/" + m[0].fields.image
+width = img.width
+height = img.height
+
+    gameBoard = new map(width,height,"/static/lolturbine/maps/" + m[0].fields.image );
+    nations = []
+    for (i = 0; i < n.length; i++){
+        index = n[i].fields.index
+        border = n[i].fields.border.split(",").map(Number)
+        x = n[i].fields.x
+        y = n[i].fields.y
+        
+        pkk = n[i].pk
+        
+        for (j = 0; j < nig.length; j++) {
+            if (pkk == nig[j].fields.area) {
+                nTroops = nig[j].fields.troops
+                pplayer = nig[j].fields.owner
+            }
+        }
+        for (j = 0; j < p.length; j++) {
+            if (pplayer == p[j].pk) {
+                color = p[j].fields.color
+            }
+        }
+        
+
+        nations[index] = new nation(index, nTroops, color,border,x,y)
+        //console.log(nations)
+        color = "gray"
+    }
+    // Må sjekke (på en fornuftig måte) om spilleren som har siden åpen er nåværende spiller
+    
+    stage = 1
+    if (cp[0].fields.index != g[0].fields.current_player) {
+        stage = 4
+    }
+    ppp = new player(cp[0].fields.color, cp[0].fields.nTroops,stage)
+
+
+    myGameArea.start();
+}
+
+
+function player(color,troopsDue,stage) {
+    this.color = color
+    this.troopsDue = troopsDue
+    this.stage = stage
+    this.placeTroops = function() {
+        if ( this.troopsDue > 0 ) {
+            clicked = click();
+            if ( clicked && to == clicked ) {
+                clicked.troops++;
+                this.troopsDue--;
+                place_troops(clicked.id)
+            }
+            if ( clicked.owner == this.color ) { to = clicked; }
+            if ( to ) { markNation( to, "green" ); }
+        }  
+        else {
+            this.stage = 2;
+            to = null
+        }
+    },
+    this.attack = function () {
+        if ( atk && def ) { drawDice(atk, def, color); }
+        if ( attacker ) { markNation( attacker, this.color ); }
+        if ( reinforcer ) { markNation( reinforcer, "green" ); }
+        clicked = click();
+        if ( clicked ) {
+            if ( clicked.owner == this.color ) {
+                if ( reinforcer && victim && victim.owner == reinforcer.owner && victim == clicked ) {
+                    reinforce(reinforcer.id,victim.id);
+                    //reinforce(reinforcer.id, victim.id); 
+                    reinforcer.troops--;
+                    victim.troops++;
+                    atk = null;
+                    def = null;
+                    if ( reinforcer.troops < 2 ) { reinforcer = null; }
+                }
+                else if ( clicked.troops > 1 ) { 
+                    attacker = clicked;
+                    reinforcer = null;
+                }
+            }
+            else if ( attacker && ~attacker.borders.indexOf(clicked.id) ) { 
+                victim = clicked;
+                color = victim.owner;
+                attacker.assault(victim); 
+                if ( attacker && attacker.troops <= 1 ) { attacker = null; } 
+            }
+        }
+    }
+    this.reinforce = function() {
+        if( from ) { markNation(from, "green"); }
+        clicked = click();
+        //console.log(from)
+        if ( clicked ) {
+            if (clicked == from ) { from = 0;   }
+            else if (from == 0 && clicked.owner == this.color && clicked.troops > 1) { from = clicked; }
+            else if (clicked.owner == this.color && blob(from, clicked)) { 
+                
+                console.log("!!!!!!!!!!!!!ok!!!!!!!!!!!!!!!!!!!")
+                console.log(blob(from, clicked))
+                console.log(clicked.owner == this.color)
+                console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                reinforce(from.id, clicked.id); 
+                from.troops -= 1; 
+                clicked.troops += 1 
+                
+            }
+
+        }
+    }
+}
+
+function blob(f,t) {
+nodes = f.borders.slice()
+index = f.borders.slice()
+
+while (nodes.length > 0) {
+    console.log("FØR")
+    console.log(nodes)
+    console.log(index)
+    element = nodes.pop()
+    console.log("ETTER")
+    console.log(nodes)
+    console.log(index)
+    console.log("Ferdig")
+    if ( nations[element].owner = ppp.color ) {
+        b = nations[element].borders
+        for (i = 0; i < b.length; i++) { 
+            border = b.pop();  
+            if (index.indexOf(border) > -1 ) { index.push(border); nodes.push(border) }
+        }
+    if (index.indexOf(t.id) > -1) {console.log(true); return 1;}
+    }
+
+}
+console.log(false);
+return 0
+
+}
+
+function place_troops(n) {
+$.getJSON( '/lolturbine/place_troops/' + pk.toString() + '/' + n.toString(), function(data, jqXHR){ 
+console.log(data)
+
+});
+}
+
+function attack(a,v) {
+console.log(a.toString())
+console.log(v.toString())
+$.getJSON('/lolturbine/attack/' + pk.toString() + '/' + a.id.toString() + '/' + v.id.toString() , function(data, jqXHR){
+// Do stuff
+// Do something with the result
+console.log(data);
+atk = data[1]; numAttackers = atk.length;
+def = data[2]; numDefenders = def.length;
+console.log("asdada")
+drawDice( atk, def, "blue" );
+if (atk[0] > def[0]) { v.troops--; }
+else { a.troops--; }
+if (numAttackers > 1 && numDefenders > 1) {
+    if (atk[1] > def[1]) { v.troops--; }
+    else { a.troops--; }
+}
+if (v.troops == 0){
+    v.owner = a.owner;
+    v.troops = 1;
+    a.troops--;
+    reinforcer = a;
+    attacker = null;
+    }
+});
+//console.log(val)
+//return val
+}
+
+function reinforce(f,t) {
+$.getJSON('/lolturbine/reinforce/' + pk.toString() + '/' + f.toString() + '/' + t.toString(), function(data, jqXHR){
+// Do stuff
+console.log(data)
+});
+}
+
+
+function nation(id,troops,owner,borders,x,y) {
+    this.id = id;
+    this.troops = troops;
+    this.owner = owner;
+    this.borders = borders;
+    this.x = x;
+    this.y = y;
+    this.assault = function(victim) {
+        attack(this, victim)
+    }    
+    this.reinforce = function(nation) {
+        reinforce(this, nation)
+        
+    }
+}
+
+var myGameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = width;
+        this.canvas.height = height + 100;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.canvas.style.border = "1px solid";
+        
+        
+        div = document.getElementById("lolturbine");
+        document.getElementById("game").style.height = this.canvas.height.toString().concat("px");
+        document.getElementById("game").style.width = this.canvas.width.toString().concat("px");
+        div.appendChild(this.canvas);
+        this.interval = setInterval(updateGameArea, 20);
+        
+        
+        window.addEventListener('mousedown', function (e) {
+            myGameArea.x = e.pageX;
+            myGameArea.y = e.pageY;
+        })
+        window.addEventListener('mouseup', function (e) {
+            myGameArea.x = false;
+            myGameArea.y = false;
+        })
+    },
+    clear : function(){
+        this.context.clearRect(0,0, this.canvas.width, this.canvas.height);
+    }
+}
+
+function updateGameArea() {
+    myGameArea.clear();
+    gameBoard.update();
+
+    if ( ppp.stage == 1 ) { ppp.placeTroops(); }
+    if ( ppp.stage == 2 ) { ppp.attack(); }
+    if ( ppp.stage == 3 ) { ppp.reinforce(); }
+
+}
+
+function map(width,height,file) {
+    this.image = new Image();
+    this.image.src = file;
+    this.width = width;
+    this.height = height;
+    this.update = function() {
+        myGameArea.context.drawImage(this.image, 0, 0, this.width, this.height);
+        for ( i = 0; i < nations.length ; i++ ) {
+            drawText(nations[i].troops, nations[i].owner, nations[i].x, nations[i].y );
+        }
+    }
+}
+
+function drawText(text, color, x, y) {
+    myGameArea.context.font = "30px monospace";
+    myGameArea.context.fillStyle = color;
+    if ( text >= 10 ) {
+        x -= 10;
+    }
+    myGameArea.context.fillText(text, x, y);
+}
+
+function dieRoll(num) {
+    results = [];
+    for (i = 0 ; i < num ; i++) {
+        results[i] = Math.floor(Math.random() * 6) + 1;
+    }
+    return results.sort().reverse();
+}
+
+function dist(x1,y1,x2,y2) { 
+    return ( x1 - x2 ) ** 2 + ( y1 - y2 ) ** 2;
+}
+
+function click() {
+    if ( myGameArea.x ) {
+        for ( i = 0 ; i < nations.length ; i++ ) {
+            if ( dist( nations[i].x,nations[i].y,myGameArea.x - mouseOffsetX,myGameArea.y - mouseOffsetY ) < clickRadius ** 2 ) { 
+                myGameArea.x = false;
+                myGameArea.y = false;
+                return nations[i] }
+        }
+    }
+    return false;
+}
+
+function drawDice( atk, def, victim ) {
+    var x = 10;
+    var y = gameBoard.height + 5;
+    var dieSize = 30;
+    for (i = 0 ; i < atk.length ; i++ ) {
+        if ( def[i] && atk[i] > def[i] ) {
+            myGameArea.context.fillStyle = "#666699";
+            myGameArea.context.fillRect( x-3, y-3, dieSize + 6, dieSize + 6 );
+        }
+        drawDie( atk[i], x, y, dieSize, ppp.color );
+        x += dieSize + 10;
+    }
+    x += 15;
+    for (i = 0 ; i < def.length ; i++ ) {
+        if ( atk[i] && def[i] >= atk[i] ) {
+            myGameArea.context.fillStyle = "#666699";
+            myGameArea.context.fillRect( x-3, y-3, dieSize + 6, dieSize + 6 );
+        }
+        drawDie( def[i], x, y, dieSize, victim );
+        x += dieSize + 10;
+    }
+}
+
+function drawDie( num, x, y, dieSize, color ) {
+    var dotSize = 3.6;
+    myGameArea.context.beginPath();
+    myGameArea.context.fillStyle = color;
+    myGameArea.context.lineWidth = 2;
+    myGameArea.context.fillRect(x, y, dieSize, dieSize);
+    myGameArea.context.fillStyle = "white";
+    if ( num == 1 || num == 3 || num == 5 ) {
+        myGameArea.context.fillRect( x + dieSize / 2 - dotSize / 2, y + dieSize / 2 - dotSize / 2, dotSize, dotSize );
+    }
+    if ( num == 2 || num == 3 ) {
+        myGameArea.context.fillRect( x + dieSize / 4 - dotSize / 2, y + dieSize / 4 - dotSize / 2, dotSize, dotSize );
+        myGameArea.context.fillRect( x + 3 * dieSize / 4 - dotSize / 2, y + 3 * dieSize / 4 - dotSize / 2, dotSize, dotSize );
+    }
+    if ( num == 4 || num == 5 || num == 6 ) {
+        myGameArea.context.fillRect( x + dieSize / 4 - dotSize / 2, y + dieSize / 4 - dotSize / 2, dotSize, dotSize );
+        myGameArea.context.fillRect( x + dieSize / 4 - dotSize / 2, y + 3 * dieSize / 4 - dotSize / 2, dotSize, dotSize );
+        myGameArea.context.fillRect( x + 3 * dieSize / 4 - dotSize / 2, y + dieSize / 4 - dotSize / 2, dotSize, dotSize );
+        myGameArea.context.fillRect( x + 3 * dieSize / 4 - dotSize / 2, y + 3 * dieSize / 4 - dotSize / 2, dotSize, dotSize );
+    }
+    if ( num == 6 ) {
+        myGameArea.context.fillRect( x + dieSize / 4 - dotSize / 2, y + dieSize / 2 - dotSize / 2, dotSize, dotSize );
+        myGameArea.context.fillRect( x + 3 * dieSize / 4 - dotSize / 2, y + dieSize / 2 - dotSize / 2, dotSize, dotSize );
+    }
+    myGameArea.context.stroke();
+}
+
+function markNation( nation, color) {
+    myGameArea.context.lineWidth=10;
+    myGameArea.context.globalAlpha = .50;
+    myGameArea.context.strokeStyle = color;
+    myGameArea.context.beginPath();
+    myGameArea.context.arc( nation.x + mouseOffsetX, nation.y + mouseOffsetY, clickRadius, 0, 2 * Math.PI );
+    myGameArea.context.stroke();
+    myGameArea.context.globalAlpha = 1;
+}
 
 
 
-
-
-
-<script type="text/javascript">
-    startGame("lolturbine");
 </script>
 
 </body>

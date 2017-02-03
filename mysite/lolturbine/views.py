@@ -2,13 +2,16 @@ from django.shortcuts import render
 
 # Create your views here.
 
-from .models import OngoingGame,TopographicalDescription,Nation,Continent,Player,NationInGame
+from .models import OngoingGame,TopographicalDescription,Nation,Continent,Player,NationInGame,Comment
 from random import randint#, shuffle
 from math import floor
 from django.contrib.messages import get_messages
 from django.contrib import messages
 from django.http import HttpResponse,   HttpResponseRedirect
 from django.core.urlresolvers import reverse
+from django.core import serializers
+import simplejson as json
+import math,random
 
 from django.contrib.auth.decorators import login_required
 
@@ -26,7 +29,6 @@ def addNations(request,m):
     try:
         i = 0
         while (True):
-
             index = int(request.POST[str(i) + "index"])
             name = request.POST[str(i) + "name"]
             border = request.POST[str(i) + "border"]
@@ -45,7 +47,6 @@ def addContinents(request,m):
     try:
         i = 0
         while (True):
-            #index = int(request.POST["c" + str(i) + "index"])
             name = request.POST["c" + str(i) + "name"]
             nations = request.POST["c" + str(i) + "nations"]
             bonus = int(request.POST["c" + str(i) + "bonus"])
@@ -76,7 +77,88 @@ def addMap(request):
 
 @login_required
 def game(request,pk):
-    context = {}
+    game = OngoingGame.objects.filter(pk = pk)
+    if request.method == "POST":
+        comment = request.POST["chat"]
+        player = Player.objects.filter(user = request.user, game = game )[0]
+        c = Comment(player = player, comment = comment)
+        c.save()
+        text = " Comment successfully added! "
+        messages.add_message(request, messages.INFO, text)
+#        return HttpResponseRedirect(reverse('lolturbine/game/10'))
+        return HttpResponseRedirect('/lolturbine/game/' + str(pk) )
+
+
+    comments = Comment.objects.filter(player__game = game)
+
+    ###### Calculating troops #######
+    current_player = Player.objects.filter(user = request.user, game = game[0])
+    nations_in_game = NationInGame.objects.filter(owner = current_player[0], ongoing_game = game[0])
+    continents = Continent.objects.filter(topographical_description = game[0].current_map)
+
+
+    # Dette skal bare skje første gangen...
+    player = current_player[0]
+    if player.nTroops == 0 and current_player[0].index == game[0].current_player and player.new_troops == 0:
+
+
+        troopsFromArea = max(3, math.floor(len(list(nations_in_game))/3))
+        troopsFromContinents = 0
+        print("YYYYYYYYYYYYYYOOOOOOOOOOOOOOOOOOOOOOo")
+
+        for continent in continents: 
+            nations_in_continent = list(map(int, continent.nations.split(",") ))
+            number = 0
+            for nation in nations_in_game:    
+                if nation.area.index in nations_in_continent:    
+                    number += 1
+            if number == len(nations_in_continent):
+                troopsFromContinents += continent.bonus
+
+        player.nTroops = troopsFromArea + troopsFromContinents
+        player.new_troops = 1
+        player.save()
+        print(player.nTroops)
+        print(troopsFromArea + troopsFromContinents)
+
+        #print(troopsFromArea + troopsFromContinents)
+        #print(current_player[0].nTroops)
+
+    current_player = Player.objects.filter(user = request.user, game = game[0])
+    print(current_player[0].nTroops)
+    ###################Getting information#############
+    nations = Nation.objects.filter(topographical_description = game[0].current_map)
+    nations_in_game = NationInGame.objects.filter(ongoing_game = game[0])
+    continents = Continent.objects.filter(topographical_description = game[0].current_map)
+    players = Player.objects.filter(game = game[0])
+    current_map = TopographicalDescription.objects.filter(name = game[0].current_map.name)
+
+    ######################Makes the information avilable to json#######################
+    game = serializers.serialize('json', game)
+    nations_in_game = serializers.serialize('json', nations_in_game)
+    continents = serializers.serialize('json', continents)
+    nations = serializers.serialize('json', nations)
+    current_map = serializers.serialize('json', current_map)
+    players = serializers.serialize('json', players)
+    current_player = serializers.serialize('json', current_player)
+
+
+
+
+
+    context = {
+        'game' : game,
+        'nations' : nations,
+        'nations_in_game' : nations_in_game,
+        'continents' : continents,
+        'current_map' : current_map,
+        'players' : players,
+        'comments' : comments,
+        'text' : getMessage(request),
+        'current_player' : current_player,
+
+#        'current_player' : 
+    }
     return render(request, 'lolturbine/game.html',context = context)
 
 def unique_color(g):
@@ -109,7 +191,7 @@ def start_game(g):
             player_index += 1
     if nations_each*players.count() < nations.count():
         for nation in nations[nations_each*players.count():]:
-            n = NationInGame(troops = 3, area = nation, ongoing_game = g )  
+            n = NationInGame(troops = 3, area = nation, ongoing_game = g  )  
             n.save()
     g.current_player = randint(0,players.count()-1)
     g.save()
@@ -118,9 +200,9 @@ def start_game(g):
 @login_required
 def index(request):
     current_user = request.user
-    current_games = OngoingGame.objects.filter( current_player = "", player__user = current_user)
-    ongoing_games = OngoingGame.objects.filter( player__user = current_user).exclude( current_player = "" )
-    joinable_games = OngoingGame.objects.filter( current_player = "").exclude(player__user = current_user)
+    current_games = OngoingGame.objects.filter( current_player = 150, player__user = current_user)
+    ongoing_games = OngoingGame.objects.filter( player__user = current_user).exclude( current_player = 150 )
+    joinable_games = OngoingGame.objects.filter( current_player = 150).exclude(player__user = current_user)
     m = TopographicalDescription.objects.all()
 
     context = {
@@ -152,7 +234,7 @@ def index(request):
             p.save()
 
             # Joined game
-            text = "Successfully joined game."
+            text = " Successfully joined game! "
             if int(all_players.count()) + 1 == g.num_players:
                 start_game(g)
         elif "leave" in request.POST:
@@ -165,7 +247,7 @@ def index(request):
             if Player.objects.filter(game = g).count() == 0:
                 ############### DELETE GAME ###############
                 g.delete()
-            text = "Successfully removed from game."
+            text = " Successfully removed from game! "
 
         elif "new" in request.POST:
             ############ ADD NEW GAME ###########
@@ -183,7 +265,7 @@ def index(request):
             p.save()
 
             # New game was added
-            text = "Successfully added a new game."
+            text = " Successfully added a new game! "
         messages.add_message(request, messages.INFO, text)
         return HttpResponseRedirect(reverse('lolturbine:index'))
 
@@ -193,6 +275,122 @@ def index(request):
     return render(request, 'lolturbine/index.html',context = context)
 
 
+def place_troops(request,pk,n):
+    a = 0
+
+    user = request.user
+    game = OngoingGame.objects.get(pk = int(pk))
+    player = Player.objects.get(game = game, user = user)
+    nation = Nation.objects.get(index = int(n), topographical_description = game.current_map)
+    nation = NationInGame.objects.get(ongoing_game = game, area = nation)
+
+    if player.nTroops > 0 and nation.owner == player: 
+        nation.troops += 1
+        nation.save()
+        player.nTroops -= 1
+        player.save()
+        a = 1
+    return HttpResponse(a)
+
+def attack(request,pk,a,v):
+    aa = 0
+    #a,v = v,a
+
+    user = request.user
+    game = OngoingGame.objects.get(pk = int(pk))
+    player = Player.objects.get(game = game, user = user)
+    attack = Nation.objects.get(index = int(a), topographical_description = game.current_map)
+    victim = Nation.objects.get(index = int(v), topographical_description = game.current_map)
+    attack = NationInGame.objects.get(ongoing_game = game, area = attack)
+    victim = NationInGame.objects.get(ongoing_game = game, area = victim)
+    adice = []
+    vdice = []
+    b = list(map(int,attack.area.border.split(",")))
+    print(player)
+    print("attack")
+    print(attack)
+    print(attack.troops)
+    print(attack.owner)
+    print(attack.area)
+    print(attack.area.index)
+    print("victim")
+    print(victim)
+    print(victim.troops)
+    print(victim.owner)
+    print(victim.area)
+    print(victim.area.index)
+    print("!!!!!!!Slutt!!!!!!!")
+    if attack.owner == player and victim.owner != player and attack.troops > 1 and victim.area.index in b:
+        random.seed()
+        for i in range(min(3,attack.troops-1)):
+            adice.append(random.randint(1, 6))
+        for j in range(min(2,victim.troops)):
+            vdice.append(random.randint(1, 6))
+        adice.sort(reverse = True)
+        vdice.sort(reverse = True)
+        if adice[0] > vdice[0]:
+            victim.troops -= 1
+        else:
+            attack.troops -= 1
+        if len(adice) > 1 and len(vdice) > 1:   
+            if adice[1] > vdice[1]:
+                victim.troops -= 1
+            else:
+                attack.troops -= 1
+        if victim.troops == 0:
+            victim.owner = player
+            victim.troops = 1
+            attack.troops -= 1
+        attack.save()
+        victim.save()
+
+    aa = 1
+    d = json.dumps([aa,adice,vdice])
+    return HttpResponse(d)
+
+def blob(game,f,t,player):
+    nodes = list(map(int,f.area.border.split(",")))
+    index = list(map(int,f.area.border.split(",")))
+    #nodes = f.area.border
+    #index = f.area.border
+    nations = NationInGame.objects.filter(ongoing_game = game).order_by("area_id") # OBS, funker ikke generelt!!!
+    while len(nodes) > 0:
+        element = nodes.pop()
+        if nations[element].owner == player:
+            b = nations[element].area.border
+            for border in b:
+                if border not in index:
+                    index.append(border)
+                    nodes.append(border)
+        if t.area.index in index:
+            return 1
+    return 0
+
+def reinforce(request,pk,f,t):
+    a = 0
+
+    user = request.user
+    game = OngoingGame.objects.get(pk = int(pk))
+    player = Player.objects.get(game = game, user = user)
+    fo = Nation.objects.get(index = int(f), topographical_description = game.current_map)
+    to = Nation.objects.get(index = int(t), topographical_description = game.current_map)
+    fo = NationInGame.objects.get(ongoing_game = game, area = fo)
+    to = NationInGame.objects.get(ongoing_game = game, area = to)
+    print("masse Stuff")
+    print(blob(game,fo,to,player))
+    print(fo.owner == player)
+    print(to.owner == player)
+    print(fo.troops > 1)
+    if (fo.owner == player and to.owner == player and blob(game,fo,to,player) and fo.troops > 1): 
+        print("Yooooooo")
+        fo.troops -= 1
+        to.troops += 1
+        fo.save()
+        to.save()
+        a = 1
+        
+
+    return HttpResponse(a)
 
 
 
