@@ -44,6 +44,7 @@ class OngoingGame(models.Model):
     time_per_move = models.IntegerField()
     time_since_last_move = models.DateTimeField(default = timezone.now)
     pub_date = models.DateTimeField(default = timezone.now)
+    turns = models.IntegerField(default = 0)
 
     def __str__(self):
         return "map: %s, number of players: %d, timelimit: %d seconds" % (self.current_map.name,self.num_players,self.time_per_move)
@@ -54,12 +55,12 @@ class PlayerStats(models.Model):
     user = models.ForeignKey(User)
     games_won = models.IntegerField(default = 0)
     games_lost = models.IntegerField(default = 0)
-    score = models.IntegerField(default = 0)
+    score = models.IntegerField(default = 100)
     total_games_played = models.IntegerField(default = 0)
     turns_skipped = models.IntegerField(default = 0)
-    current_games = models.IntegerField(default = 0)
+    total_turns = models.IntegerField(default = 0)
     def __str__(self):
-        return self.user
+        return "Player: %s" % (self.user)
 
 class Player(models.Model):
     color = models.CharField(max_length = 200)
@@ -69,9 +70,9 @@ class Player(models.Model):
     spoils = models.CharField(max_length = 200, blank = True) # Skal inn etter hvert, hvordan fikser man dette?
     game = models.ForeignKey(OngoingGame)
     mission = models.CharField(max_length = 200, blank = True) # Skal inn etter hvert, men usikker på hvordan
-    new_troops = models.IntegerField(default = 0)
+    stage = models.IntegerField(default = 0)
     def __str__(self):
-        return "User %s in %s" % (self.user,self.game)
+        return "User %s in %s" % (self.user.username,self.game)
 
 class Comment(models.Model):
     player = models.ForeignKey(Player,blank = True)

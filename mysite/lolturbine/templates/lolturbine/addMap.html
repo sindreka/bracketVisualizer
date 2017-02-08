@@ -5,19 +5,15 @@
 <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
 </head>
-<body onload="setFields()" >
+<body onload="loadPage()">
 
 <a href={% url 'lolturbine:index' %} > return to page </a>
 {% if text %}
 <h2>{{ text }} </h2>
 {% endif %}
 
-<table>
 
-<tr> <th>Set number of nations: </th> <th> <input id="nations" type="number" min=1 value=1 > </th>
-<tr> <th>Set number of continents: </th> <th> <input id="continents" type="number" min=1 value=1 > </th>
-<tr> <th><input type="submit" class="btn btn-default" value="submit" onclick="setFields()" /> </th> <th> </th> </tr>
-</table>
+ 
 
 
 
@@ -27,130 +23,129 @@
 <input type="text" name="map_name" id="map_name" required />
 <h2> Map picture: </h2>
 <input type="file" id="imageLoader" name="imageLoader"/>
-<div id="game"><div id="lolturbine"><canvas id="imageCanvas" height="0" width="0" ></canvas> </div> </div> <!-- style="height:0px;width:0px;" -->
+<div id="game"><div id="lolturbine"><canvas id="imageCanvas" height="0" width="0" ></canvas> </div> </div>
 
 <p > <b id="x"> </b> <b id="y" > </b> </p>
+
+<div > <!-- style="max-height:600px" -->
 <h2> Register nations here: </h2>
 <table>
 <thead><tr> <th> Index </th> <th> Name </th> <th> Borders </th> <th> x </th> <th> y </th> </tr> </thead>
 <tbody  id="nationFields"> </tbody>
 </table>
+<button type="button" class="btn btn-default" onclick="addNationField()" > Add field </button>
+</div>
 
+<div > <!-- style="max-height:600px"-->
 <h2> Register continents here: </h2>
 <table>
 <thead><tr> <th> Name </th> <th> Nations </th> <th> Bonus </th> </tr> </thead>
 <tbody  id="continentFields"> </tbody>
 </table>
-
+<button type="button" class="btn btn-default" onclick="addContinentField()" > Add field </button> <br> <br>
+</div>
  <input type="submit" class="btn btn-default" value="submit"/>
 </form>
 
 
 <script>
-function setFields() {
-    var num_nations = document.getElementById("nations").value;
-    var nations = document.getElementById("nationFields")
-    while (nations.firstChild) {
-        nations.removeChild(nations.firstChild);
-    }
-    setNations(num_nations);
+indexN = 0;
+indexC = 0;
 
-    var num_continents = document.getElementById("continents").value;
-    var continents = document.getElementById("continentFields")
-    while (continents.firstChild) {
-        continents.removeChild(continents.firstChild);
-    }
-    setContinents(num_continents);
+function loadPage() {
+    addNationField();
+    addContinentField() ;
 }
 
+function addNationField() {
 
-function setNations(value) {
+        var nation = document.createElement("tr");
 
-    for (i = 0; i < value ; i++) {
-        var nation = document.createElement("tr")
-
-        var current = document.createElement("th")
+        var current = document.createElement("th");
         var index = document.createElement("input");
         index.setAttribute('type',"number");
-        index.setAttribute('name',i.toString() + "index");
-        index.setAttribute('value',i);
-        index.setAttribute('id',i.toString() + "index");
+        index.setAttribute('name',indexN.toString() + "index");
+        index.setAttribute('value',indexN);
+        index.setAttribute('disabled',true);
+        index.setAttribute('size',4);
+        index.setAttribute('maxlength',4);
+        index.setAttribute('id',indexN.toString() + "index");
         current.appendChild(index);
         nation.appendChild(current);
 
-        var current = document.createElement("th")
+        var current = document.createElement("th");
         var name = document.createElement("input"); 
         name.setAttribute('type',"text");
-        name.setAttribute('name',i.toString() + "name");
+        name.setAttribute('name',indexN.toString() + "name");
         name.setAttribute('value',"");
-        name.setAttribute('id',i.toString() + "name");
-        current.appendChild(name)
+        name.setAttribute('id',indexN.toString() + "name");
+        current.appendChild(name);
         nation.appendChild(current);
 
-        var current = document.createElement("th")
+        var current = document.createElement("th");
         var border = document.createElement("input");
         border.setAttribute('type',"text");
-        border.setAttribute('name',i.toString() + "border");
-        border.setAttribute('id',i.toString() + "border");
-        current.appendChild(border)
+        border.setAttribute('name',indexN.toString() + "border");
+        border.setAttribute('id',indexN.toString() + "border");
+        current.appendChild(border);
         nation.appendChild(current);
 
-        var current = document.createElement("th")
+        var current = document.createElement("th");
         var x = document.createElement("input");
         x.setAttribute('type',"number");
-        x.setAttribute('name',i.toString() + "x");
-        x.setAttribute('id',i.toString() + "x");
+        x.setAttribute('name',indexN.toString() + "x");
+        x.setAttribute('id',indexN.toString() + "x");
         x.setAttribute('onchange',"plot(this)");
         current.appendChild(x);
         nation.appendChild(current);
 
-        var current = document.createElement("th")
+        var current = document.createElement("th");
         var y = document.createElement("input");
         y.setAttribute('type',"number");
-        y.setAttribute('name',i.toString() + "y");
-        y.setAttribute('id',i.toString() + "y");
+        y.setAttribute('name',indexN.toString() + "y");
+        y.setAttribute('id',indexN.toString() + "y");
         y.setAttribute('onchange',"plot(this)");
         current.appendChild(y);
         nation.appendChild(current);
 
         document.getElementById("nationFields").appendChild(nation);
+        indexN += 1;
 
 
-    }
 }
-function setContinents(value) {
+function addContinentField() {
 
-    for (i = 0; i < value ; i++) {
         var continent = document.createElement("tr")
 
         var current = document.createElement("th")
         var name = document.createElement("input");
         name.setAttribute('type',"text");
-        name.setAttribute('name',"c" + i.toString() + "name");
+        name.setAttribute('name',"c" + indexC.toString() + "name");
         name.setAttribute('value',"");
-        name.setAttribute('id',"c" + i.toString() + "name");
+        name.setAttribute('id',"c" + indexC.toString() + "name");
         current.appendChild(name);
         continent.appendChild(current);
 
         var current = document.createElement("th")
         var nations = document.createElement("input");
         nations.setAttribute('type',"text");
-        nations.setAttribute('name',"c" + i.toString() + "nations");
+        nations.setAttribute('name',"c" + indexC.toString() + "nations");
         nations.setAttribute('value',"");
-        nations.setAttribute('id',"c" + i.toString() + "nations");
+        nations.setAttribute('id',"c" + indexC.toString() + "nations");
         current.appendChild(nations);
         continent.appendChild(current);
 
         var current = document.createElement("th")
         var bonus = document.createElement("input");
         bonus.setAttribute('type',"number");
-        bonus.setAttribute('name',"c" + i.toString() + "bonus");
-        bonus.setAttribute('id',"c" + i.toString() + "bonus");
+        bonus.setAttribute('name',"c" + indexC.toString() + "bonus");
+        bonus.setAttribute('id',"c" + indexC.toString() + "bonus");
         current.appendChild(bonus);
         continent.appendChild(current);
 
         document.getElementById("continentFields").appendChild(continent);
-    }
+        indexC += 1
+
 }
 </script>
 <script>
@@ -223,7 +218,7 @@ var gameArea = {
 function updateGameArea(){
 gameArea.clear();
 gameArea.context.drawImage(img,0,0,img.width,img.height);
-drawText(gameArea.x,gameArea.y, 30, "red", "11");
+drawText(gameArea.x,gameArea.y, 20, "red", "11");
 drawindices();
 
 if (gameArea.x){
@@ -237,7 +232,7 @@ if (gameArea.x){
 
 function drawindices() {
 for (i = 0; i < indices.length; i++) {
-    drawText(indices[i][0],indices[i][1], 30, "red", indices[i][2]);
+    drawText(indices[i][0],indices[i][1], 20, "red", indices[i][2]);
 }
 }
 
@@ -245,6 +240,9 @@ function drawText(x,y,s,c,t){
 ctx = gameArea.context;
 ctx.fillStyle = c;
 ctx.font = "bold " + s.toString() + "px monospace";
+if ( t >= 10 ) {
+    x -= 10;
+}
 ctx.fillText(t, x, y);
 }
 

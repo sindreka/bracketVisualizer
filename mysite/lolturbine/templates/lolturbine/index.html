@@ -61,7 +61,7 @@
 <form action={% url 'lolturbine:index' %}  method="POST"> 
 {% csrf_token %}   
 <tr> <th> {{ game.current_map.name }} </th> <th> {{ game.player_set.count }} / {{ game.num_players }} </th> <th> {{ game.time_per_move }} </th> 
-<th> <input type="submit" class="btn btn-default" name="leave" value="l"/> <th>
+<th> <input type="submit" class="btn btn-default" name="leave" value="leave"/> <th>
 <input type="hidden" name="l" id="l" value="{{game.pk}}">
 </tr>
 </form>

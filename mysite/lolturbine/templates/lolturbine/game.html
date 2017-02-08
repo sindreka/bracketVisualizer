@@ -5,7 +5,7 @@
  <!-- <script src="{% static 'lolturbine/js/lolturbine.js' %}"></script> -->
         <script>window.jQuery || document.write('<script src={% static "js/jquery-3.1.1.min.js"%}  ><\/script>')</script>
 </head>
-<body onload="startGame( {{ game }}, {{ nations_in_game }}, {{ continents }}, {{ nations }}, {{ current_map }}, {{ players }}, {{ current_player }} )">
+<body onload="startGame( {{ game }}, {{ nations_in_game }}, {{ continents }}, {{ nations }}, {{ current_map }}, {{ players }}, {{ current_player }}, {{ users }} )">
 
 <a href={% url 'lolturbine:index' %} > return to page </a>
 {% if text %}
@@ -19,16 +19,22 @@
 </div>
 <form method="POST">
 {% csrf_token %}
-<input id="chat" name="chat" type="text" >
-<input type="submit" id="submit" name="submit" class="btn btn-default" value="submit"/>
+<input id="c" name="c" type="text" >
+<input type="submit" id="submit" name="chat" class="btn btn-default" value="submit"/>
 </form>
-
+<br>
 <button type="submit" id="s" name="s" class="btn btn-default" onclick="stageFour()"/>
 End battle stage
 </button>
-
-<form method = "POST" >
-<input type="submit" id="endturn" name="endturn" class="btn btn-default" value="End turn"/>
+<br>
+<form method="POST">
+{% csrf_token %}
+<input type="submit" id="submit" name="endturn" class="btn btn-default" value="End turn"/>
+</form>
+<br>
+<form method="POST">
+{% csrf_token %}
+<input type="submit" id="submit" name="leave" class="btn btn-default" value="Leave battle"/>
 </form>
 
 <script>
@@ -49,13 +55,19 @@ var width;
 var height;
 var ppp;
 var pk;
+var players;
+var continents;
+var users;
+var game;
 
 function stageFour() {
-ppp.stage = 3
+if (ppp.stage < 4 && ppp.stage > 0) {
+    ppp.stage = 3
+}
 }
 
 
-function startGame(g,nig,c,n,m,p,cp) {
+function startGame(g,nig,c,n,m,p,cp,u) {
 
 console.log("g")
 console.log(g)
@@ -71,7 +83,13 @@ console.log("p")
 console.log(p)
 console.log("cp")    
 console.log(cp)    
+console.log("u")
+console.log(u)
 pk = g[0].pk
+continents = c;
+players = p;
+users = u;
+game = g;
 
 //console.log(n[0].fields.image)
 var img = new Image();
@@ -88,31 +106,27 @@ height = img.height
         y = n[i].fields.y
         
         pkk = n[i].pk
-        
+        pplayer = false
         for (j = 0; j < nig.length; j++) {
             if (pkk == nig[j].fields.area) {
                 nTroops = nig[j].fields.troops
                 pplayer = nig[j].fields.owner
             }
         }
+        alpha = 1
         for (j = 0; j < p.length; j++) {
             if (pplayer == p[j].pk) {
                 color = p[j].fields.color
+                alpha = 0
             }
         }
-        
+        if (alpha) { color = "gray" }
 
         nations[index] = new nation(index, nTroops, color,border,x,y)
-        //console.log(nations)
         color = "gray"
     }
-    // Må sjekke (på en fornuftig måte) om spilleren som har siden åpen er nåværende spiller
-    
-    stage = 1
-    if (cp[0].fields.index != g[0].fields.current_player) {
-        stage = 4
-    }
-    ppp = new player(cp[0].fields.color, cp[0].fields.nTroops,stage)
+
+    ppp = new player(cp[0].fields.color, cp[0].fields.nTroops,cp[0].fields.stage)
 
 
     myGameArea.start();
@@ -141,14 +155,14 @@ function player(color,troopsDue,stage) {
     },
     this.attack = function () {
         if ( atk && def ) { drawDice(atk, def, color); }
+        if (attacker && attacker.troops < 2) { attacker = null; }
         if ( attacker ) { markNation( attacker, this.color ); }
         if ( reinforcer ) { markNation( reinforcer, "green" ); }
         clicked = click();
         if ( clicked ) {
             if ( clicked.owner == this.color ) {
                 if ( reinforcer && victim && victim.owner == reinforcer.owner && victim == clicked ) {
-                    reinforce(reinforcer.id,victim.id);
-                    //reinforce(reinforcer.id, victim.id); 
+                    reinforce_battle(reinforcer.id,victim.id);
                     reinforcer.troops--;
                     victim.troops++;
                     atk = null;
@@ -175,15 +189,12 @@ function player(color,troopsDue,stage) {
         if ( clicked ) {
             if (clicked == from ) { from = 0;   }
             else if (from == 0 && clicked.owner == this.color && clicked.troops > 1) { from = clicked; }
-            else if (clicked.owner == this.color && blob(from, clicked)) { 
+            else if (clicked.owner == this.color && blob(from, clicked) ) { 
                 
-                console.log("!!!!!!!!!!!!!ok!!!!!!!!!!!!!!!!!!!")
-                console.log(blob(from, clicked))
-                console.log(clicked.owner == this.color)
-                console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                 reinforce(from.id, clicked.id); 
                 from.troops -= 1; 
                 clicked.troops += 1 
+                if (from.troops < 2) { from = 0; }
                 
             }
 
@@ -192,29 +203,29 @@ function player(color,troopsDue,stage) {
 }
 
 function blob(f,t) {
-nodes = f.borders.slice()
-index = f.borders.slice()
+nodes = [];
+nodes.push(f.id)
+index = [];
+index.push(f.id)
+
+console.log(f)
+console.log(t)
 
 while (nodes.length > 0) {
-    console.log("FØR")
-    console.log(nodes)
-    console.log(index)
-    element = nodes.pop()
-    console.log("ETTER")
-    console.log(nodes)
-    console.log(index)
-    console.log("Ferdig")
-    if ( nations[element].owner = ppp.color ) {
-        b = nations[element].borders
+    element = nodes.pop();
+    if ( nations[element].owner == ppp.color ) {
+        b = nations[element].borders.slice()
         for (i = 0; i < b.length; i++) { 
-            border = b.pop();  
-            if (index.indexOf(border) > -1 ) { index.push(border); nodes.push(border) }
+            border = b[i];
+            if (index.indexOf(border) == -1 ) { 
+                index.push(border); 
+                nodes.push(border); 
+            }
         }
-    if (index.indexOf(t.id) > -1) {console.log(true); return 1;}
+    if (index.indexOf(t.id) > -1) {return 1;}
     }
 
 }
-console.log(false);
 return 0
 
 }
@@ -232,10 +243,8 @@ console.log(v.toString())
 $.getJSON('/lolturbine/attack/' + pk.toString() + '/' + a.id.toString() + '/' + v.id.toString() , function(data, jqXHR){
 // Do stuff
 // Do something with the result
-console.log(data);
 atk = data[1]; numAttackers = atk.length;
 def = data[2]; numDefenders = def.length;
-console.log("asdada")
 drawDice( atk, def, "blue" );
 if (atk[0] > def[0]) { v.troops--; }
 else { a.troops--; }
@@ -251,16 +260,22 @@ if (v.troops == 0){
     attacker = null;
     }
 });
-//console.log(val)
-//return val
+}
+
+function reinforce_battle(f,t) {
+$.getJSON('/lolturbine/reinforce_battle/' + pk.toString() + '/' + f.toString() + '/' + t.toString(), function(data, jqXHR){
+
+console.log(data)
+});
 }
 
 function reinforce(f,t) {
 $.getJSON('/lolturbine/reinforce/' + pk.toString() + '/' + f.toString() + '/' + t.toString(), function(data, jqXHR){
-// Do stuff
+
 console.log(data)
 });
 }
+
 
 
 function nation(id,troops,owner,borders,x,y) {
@@ -283,7 +298,7 @@ var myGameArea = {
     canvas : document.createElement("canvas"),
     start : function() {
         this.canvas.width = width;
-        this.canvas.height = height + 100;
+        this.canvas.height = height + (1+players.length)*24;
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.canvas.style.border = "1px solid";
@@ -317,6 +332,7 @@ function updateGameArea() {
     if ( ppp.stage == 1 ) { ppp.placeTroops(); }
     if ( ppp.stage == 2 ) { ppp.attack(); }
     if ( ppp.stage == 3 ) { ppp.reinforce(); }
+    DrawStats();
 
 }
 
@@ -333,8 +349,117 @@ function map(width,height,file) {
     }
 }
 
+function DrawStats() {
+// Hvor mange områder hver spiller har, om spilleren er aktiv, hvor mange tropper hver spiller får,
+// Hvem sin tur det er nå. Hvilke kontinenter som tilhører hvem, og 
+y = height+22;
+x = width - 320;
+
+
+// her skal continenter ordnes
+var sda = {};
+for (i = 0; i < continents.length; i ++) {
+    listOfNations = continents[i].fields.nations.split(",").map(Number)
+
+    play = nations[listOfNations[0]].owner
+    counter = 1
+    for (j = 1; j < listOfNations.length; j ++) {
+        if( play == nations[listOfNations[j]].owner ) {
+            counter += 1
+        }
+    }
+    if ( counter == listOfNations.length ) {
+        sda[play] =  (sda[play] + continents[i].fields.bonus || continents[i].fields.bonus )
+    }
+
+}
+//console.log(sda)
+    var text = "player  areas  troops  due" 
+    drawText(text,"gray",x,y );
+    y += 22
+for (i = 0; i < players.length; i++) {
+    nNations = 0;
+    sumTroops = 0;
+    for (j = 0; j < nations.length; j++) {
+        if (nations[j].owner == players[i].fields.color) {
+          // Add a number   
+            nNations += 1;
+            sumTroops += nations[j].troops
+        }
+    
+    }
+    color = players[i].fields.color;
+    if ( players[i].fields.index == game[0].fields.current_player ) {
+        // Current player
+        //plp = "Playing";
+        drawCircle(4,"green",x-10,y-6)
+    } else if ( players[i].fields.stage == -1 ) {
+        drawText("x","gray",x-15,y );
+        // Da er spilleren med, men har ikke tur
+//    } else {
+        // Da er spilleren slått ut!
+
+    }
+    // her skal relevant informasjon skrives
+    cTroops = 0
+    if (sda[players[i].fields.color]) {
+        cTroops = sda[players[i].fields.color]
+    }
+    nTroops = Math.max(3,Math.floor(nNations/3)) + cTroops;
+    if (nNations == 0) { nTroops = 0; }
+
+    //drawCircle(users[i],color,x-15,y );
+    drawText(users[i],color,x,y );
+    drawText(nNations.toString(),color,x+130,y );
+    drawText(sumTroops,color,x+210,y );
+    drawText(nTroops,color,x+290,y );
+
+    if (nNations == 0) { 
+        ctx = myGameArea.context;
+        ctx.fillRect(x-3,y-8,306,2)
+    }
+
+//    drawText(plp,color,x+150,y );
+    
+    y += 22;
+}
+if (ppp.stage == 1) { 
+    text = "Place new troops!"
+    drawText(text,"gray",200,height+22);
+    text = "you have " + ppp.troopsDue.toString() + " troops due";
+    drawText(text,"gray",200-20,height+44);
+    } else if (ppp.stage == 2) {
+    text = "Attack!"
+    drawText(text,"gray",200,height+33);
+    } else if (ppp.stage == 3) {
+        text = "move troops"
+        drawText(text,"gray",200,height+33);
+    } else if (ppp.stage == 10) {
+        text = "You won!"
+        drawText(text,"green",200,height+33);
+    } else if (ppp.stage == -1 || ppp.stage == -2) {
+        text = "you lost"
+        drawText(text,"gray",200,height+33);
+    } else if (ppp.stage == 0) { 
+        drawText("waiting","gray",200,height+33);
+    } else {drawText("spectate","gray",200,height+33);}
+
+
+    
+}
+
+function drawCircle(size,color,x,y) {
+ctx = myGameArea.context;
+ctx.fillStyle = color;
+ctx.strokeStyle = "white";
+ctx.beginPath();
+ctx.arc(x,y,size,0,2*Math.PI);
+ctx.stroke();
+ctx.fill();
+}
+
 function drawText(text, color, x, y) {
-    myGameArea.context.font = "30px monospace";
+    myGameArea.context.font = "20px monospace";
     myGameArea.context.fillStyle = color;
     if ( text >= 10 ) {
         x -= 10;
