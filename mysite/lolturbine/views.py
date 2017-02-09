@@ -76,9 +76,10 @@ def addMap(request):
 @login_required
 def endturn(u,game):
     nations = NationInGame.objects.filter(ongoing_game = game)
-    playersNations = NationInGame.objects.filter(ongoing_game = game)
-    players = Player.objects.filter(game = game)
     current_player = Player.objects.get(game = game, index = game.current_player)
+    playersNations = NationInGame.objects.filter(ongoing_game = game, owner = current_player)
+    players = Player.objects.filter(game = game)
+
     ps = PlayerStats.objects.get(user = u.user) 
 
     ps.total_turns += 1
@@ -417,8 +418,12 @@ def attack(request,pk,a,v):
             victim.troops = 1
             attack.troops -= 1 
             v = NationInGame.objects.filter(ongoing_game = game, owner = defender)
+            a = NationInGame.objects.filter(ongoing_game = game, owner = player)
+            al = NationInGame.objects.filter(ongoing_game = game)
             if v.count() == 0:
                 victim.stage = -1
+            if a.count() == al.count():
+                attack.stage = 10
             ################Sjekk om denne spilleren har tapt!######################
         attack.save()
         victim.save()
