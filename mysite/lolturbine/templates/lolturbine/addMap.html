@@ -13,40 +13,44 @@
 {% endif %}
 
 
+<p> 
+In the fields marked "Borders" and "Nations", all the relevant nation's index should be written with a comma inbetween. Eg: A nation with border 1,2,3 borders to nations with index 1, 2 and 3. When you load the map you can click on it to get the x and y coordinates. Click on "Create XML" to genereate a XML, this should be kept in case any error occur. 
+</p>
+
  
-
-
-
 <form action={% url 'lolturbine:addMap' %} method="POST">
-{% csrf_token %}
-<h2> Map name: </h2>
-<input type="text" name="map_name" id="map_name" required />
-<h2> Map picture: </h2>
-<input type="file" id="imageLoader" name="imageLoader"/>
-<div id="game"><div id="lolturbine"><canvas id="imageCanvas" height="0" width="0" ></canvas> </div> </div>
+    {% csrf_token %}
+    <h2> Map name: </h2>
+    <input type="text" name="map_name" id="map_name" required />
+    <h2> Map picture: </h2>
+    <input type="file" id="imageLoader" name="imageLoader" required/>
+    <div id="game"><div id="lolturbine"><canvas id="imageCanvas" height="0" width="0" ></canvas> </div> </div>
 
-<p > <b id="x"> </b> <b id="y" > </b> </p>
+    <p > <b id="x"> </b> <b id="y" > </b> </p>
 
-<div > <!-- style="max-height:600px" -->
-<h2> Register nations here: </h2>
-<table>
-<thead><tr> <th> Index </th> <th> Name </th> <th> Borders </th> <th> x </th> <th> y </th> </tr> </thead>
-<tbody  id="nationFields"> </tbody>
-</table>
-<button type="button" class="btn btn-default" onclick="addNationField()" > Add field </button>
-</div>
+    <div > <!-- style="max-height:600px" -->
+        <h2> Register nations here: </h2>
+        <table>
+            <thead><tr> <th> Index </th> <th> Name </th> <th> Borders </th> <th> x </th> <th> y </th> </tr> </thead>
+            <tbody  id="nationFields"> </tbody>
+        </table>
+        <button type="button" class="btn btn-default" onclick="addNationField()" > Add field </button>
+    </div>
 
-<div > <!-- style="max-height:600px"-->
-<h2> Register continents here: </h2>
-<table>
-<thead><tr> <th> Name </th> <th> Nations </th> <th> Bonus </th> </tr> </thead>
-<tbody  id="continentFields"> </tbody>
-</table>
-<button type="button" class="btn btn-default" onclick="addContinentField()" > Add field </button> <br> <br>
-</div>
- <input type="submit" class="btn btn-default" value="submit"/>
+    <div > <!-- style="max-height:600px"-->
+        <h2> Register continents here: </h2>
+        <table>
+        <thead><tr> <th> Name </th> <th> Nations </th> <th> Bonus </th> </tr> </thead>
+        <tbody  id="continentFields"> </tbody>
+        </table>
+        <button type="button" class="btn btn-default" onclick="addContinentField()" > Add field </button> <br> <br>
+    </div>
+    <textarea name="textField" style="width:80%;min-height:450px;" id="textField" required></textarea><br><br>
+    <button type="button" class="btn btn-default" onclick="updateTextArea()" > Create XML </button> <br> <br>
+<br>
+<br>
+     <input type="submit" class="btn btn-default" value="submit"/>
 </form>
-
 
 <script>
 indexN = 0;
@@ -147,6 +151,48 @@ function addContinentField() {
         indexC += 1
 
 }
+
+function updateTextArea() {
+    var x,y,index, name, border,nations,bonus;
+    var text = "<map>\n";
+    map_name = document.getElementById("map_name").value;
+    text += "\t<name>" + map_name + "</name>\n";
+    text += "\t<nations>\n"
+    for (i = 0; i < indexN; i++) {  // Nations
+        index = i;
+        name = document.getElementById(i.toString() + "name");
+        border = document.getElementById(i.toString() + "border");
+        x = document.getElementById(i.toString() + "x");
+        y = document.getElementById(i.toString() + "y");
+        if (name.value != "" ) {
+            text += "\t\t<nation>\n";
+            text += "\t\t\t<index>" + i.toString() + "</index>\n";
+            text += "\t\t\t<name>" + name.value + "</name>\n";
+            text += "\t\t\t<border>" + border.value + "</border>\n";
+            text += "\t\t\t<x>" + x.value.toString() + "</x>\n";
+            text += "\t\t\t<y>" + y.value.toString() + "</y>\n";
+            text += "\t\t</nation>\n";
+        }
+    }
+    text += "\t</nations>\n";
+    text += "\t<continents>\n";
+    for (i = 0; i < indexC; i++) { // Continents
+        name = document.getElementById("c" + i.toString() + "name");
+        nations = document.getElementById("c" + i.toString() + "nations");
+        bonus = document.getElementById("c" + i.toString() + "bonus");
+        if (name.value != "") {
+            text += "\t\t<continent>\n";
+            text += "\t\t\t<name>" + name.value + "</name>\n";
+            text += "\t\t\t<nations>" + nations.value + "</nations>\n";
+            text += "\t\t\t<bonus>" + bonus.value.toString() + "</bonus>\n";
+            text += "\t\t</continent>\n";
+        }
+    }
+    text += "\t</continents>\n";
+    text += "</map>";
+    document.getElementById("textField").value = text;
+}
+
 </script>
 <script>
 var imageLoader = document.getElementById('imageLoader');

@@ -10,6 +10,7 @@ class TopographicalDescription(models.Model):
     image = models.FileField(upload_to='lolturbine/static/maps')
     created_by = models.ForeignKey(User, blank = True)
     pub_date = models.DateTimeField(default = timezone.now)
+    refrence = models.TextField(blank = True)
     def __str__(self):
         return self.name
     class Meta:
@@ -41,13 +42,13 @@ class OngoingGame(models.Model):
     current_map = models.ForeignKey(TopographicalDescription, blank = True)
     num_players = models.IntegerField()
     current_player = models.IntegerField(default = 150)
-    time_per_move = models.IntegerField()
+    time_per_move = models.CharField(max_length = 6)
     time_since_last_move = models.DateTimeField(default = timezone.now)
     pub_date = models.DateTimeField(default = timezone.now)
     turns = models.IntegerField(default = 0)
 
     def __str__(self):
-        return "map: %s, number of players: %d, timelimit: %d seconds" % (self.current_map.name,self.num_players,self.time_per_move)
+        return "map: %s, number of players: %i, timelimit: %s seconds" % (self.current_map.name,self.num_players,self.time_per_move)
     class Meta:
         ordering = ['pub_date']
 
@@ -73,6 +74,18 @@ class Player(models.Model):
     stage = models.IntegerField(default = 0)
     def __str__(self):
         return "User %s in %s" % (self.user.username,self.game)
+
+class gameLog(models.Model):
+    game = models.ForeignKey(OngoingGame)
+    stage = models.IntegerField()
+    nation1_index = models.IntegerField()
+    nation2_index = models.IntegerField(blank = True, null = True)
+    player1_color = models.CharField(max_length = 200, blank = True, null = True)
+    player2_color = models.CharField(max_length = 200)
+    change_nation1_troops = models.IntegerField(default = 0)
+    change_nation2_troops = models.IntegerField(default = 0)
+    class Meta:
+        ordering = ['pk']
 
 class Comment(models.Model):
     player = models.ForeignKey(Player,blank = True)

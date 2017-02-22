@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 
-from .models import OngoingGame, Continent, TopographicalDescription, NationInGame, Nation, Player,PlayerStats, Comment
+from .models import OngoingGame, Continent, TopographicalDescription, NationInGame, Nation, Player,PlayerStats, Comment,gameLog
 
 class ContinentAdmin(admin.TabularInline):
     model = Continent
@@ -25,3 +25,4 @@ admin.site.register(NationInGame)
 admin.site.register(TopographicalDescription,TopographicalDescriptionAdmin)
 admin.site.register(Continent)
 admin.site.register(Nation)
+admin.site.register(gameLog)

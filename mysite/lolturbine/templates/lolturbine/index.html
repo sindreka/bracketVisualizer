@@ -1,82 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
+<style>
+div.createNewGame {
+
+}
+</style>
 </head>
-<body >
+<body>
 <h1> Hei {{ user }}  </h1>
 {% if text %}
-<h2>{{ text }} </h2>
+    <h2>{{ text }} </h2>
 {% endif %}
 
 <ul>
-{% for game in ongoing_games %}
-  <li>  <a href="game/{{ game.pk }}"> {{ game }} </a> </li>
-{% endfor %}
+    {% for game in ongoing_games %}
+        <li>  <a href="game/{{ game.pk }}"> {{ game }} </a> </li>
+    {% endfor %}
 </ul>
 
 <p> <a href={% url 'lolturbine:addMap' %}> Add new map </a> </p>
-<table >
-<thead> <tr> <th> Map </th> <th> # players </th> <th> time limit </th> </tr> </thead>
-<tbody>
 
-<form action={% url 'lolturbine:index' %} method="POST" >
-{% csrf_token %}
-<th>
-<select name="map">
-{% for map in maps %}
-<option value="{{map.name}}">{{ map.name }}</option>  
-{% endfor %}
-</select>
-</th>
-<th>
-<select name="num_players">
-<option value="2">2</option>  
-<option value="3">3</option>  
-<option value="4">4</option>  
-<option value="5">5</option>  
-<option value="6">6</option>  
-<option value="7">7</option>  
-<option value="8">8</option>  
-</select>
-</th>
+<div class = "createNewGame"> 
+    <img src="/static/lolturbine/maps/{{ maps.0.image.url }}" id = mapPic > 
+    <table>
+        <thead> <tr> <th> map </th> <th> # players </th> <th> time limit </th> <th> mission </th> <th> spoils </th> </tr> </thead>
 
-<th>
-<select name="time_limit">
-<option value="1">1m</option>  
-<option value="5">5m</option>  
-<option value="10">10m</option>  
-<option value="60">1h</option>  
-<option value="720">12h</option>  
-<option value="1440">24h</option>  
-</select>
-</th>
-<th>
-<input type="submit" class="btn btn-default" name="new" value="Add game"/>
- </th>
-</tr>
-</tbody>
-</form>
+        <tbody>
+            <form action={% url 'lolturbine:index' %} method="POST" >
+                {% csrf_token %}
+                <th>
+                    <select name="map" id="map" onchange="drawMap()" required>
+                        {% for map in maps %}
+                            <option value="{{map.name}}" id="{{map.image.url}}" >{{ map.name }}</option>  
+                        {% endfor %}
+                    </select>
+                </th>
+                <th>
+                    <select name="num_players">
+                        <option value="2">2</option>  
+                        <option value="3">3</option>  
+                        <option value="4">4</option>  
+                        <option value="5">5</option>  
+                        <option value="6">6</option>  
+                        <option value="7">7</option>  
+                        <option value="8">8</option>  
+                    </select>
+                </th>
+                <th>
+                    <select name="time_limit">
+                        <option value="1m">1m</option>  
+                        <option value="3m">3m</option>  
+                        <option value="5m">5m</option>  
+                        <option value="24h">24h</option>  
+                    </select>
+                </th>
+                <th>
+                    <input type="checkbox" name="mission"  value=0 />
+                </th>
+                <th>
+                    <input type="checkbox" name="spoils"  value=0 />
+                </th>
+                <th>
+                    <input type="submit" class="btn btn-default" name="new" value="Add game"/>
+                 </th>
+                </tr>
 
-{% for game in current_games reversed %}
-<form action={% url 'lolturbine:index' %}  method="POST"> 
-{% csrf_token %}   
-<tr> <th> {{ game.current_map.name }} </th> <th> {{ game.player_set.count }} / {{ game.num_players }} </th> <th> {{ game.time_per_move }} </th> 
-<th> <input type="submit" class="btn btn-default" name="leave" value="leave"/> <th>
-<input type="hidden" name="l" id="l" value="{{game.pk}}">
-</tr>
-</form>
-{% endfor %}
-
-{% for game in joinable_games reversed %}
-<form action={% url 'lolturbine:index' %}  method="POST"> 
-{% csrf_token %}   
-<tr> <th> {{ game.current_map.name }} </th> <th> {{ game.player_set.count }} / {{ game.num_players }} </th> <th> {{ game.time_per_move }} </th> 
-<th> <input type="submit" class="btn btn-default" name="join" value="join"/> <th>
-<input type="hidden" name="j" id="j" value="{{game.pk}}">
-</tr>
-</form>
-{% endfor %}
+            </form>
+        </tbody>
+    </table>
+</div>
+<br>
+<p> Missions, spoils and timelimits are not enforced </p>
+<br>
+<table>
+    {% for game in current_games reversed %}
+        <form action={% url 'lolturbine:index' %}  method="POST"> 
+            {% csrf_token %}   
+            <tr> <th> {{ game.current_map.name }} </th> <th> {{ game.player_set.count }} / {{ game.num_players }} </th> <th> {{ game.time_per_move }} </th> 
+                <th> <input type="submit" class="btn btn-default" name="leave" value="leave"/> <th>
+                <input type="hidden" name="l" id="l" value="{{game.pk}}">
+            </tr>
+        </form>
+    {% endfor %}
+    {% for game in joinable_games reversed %}
+        <form action={% url 'lolturbine:index' %}  method="POST"> 
+            {% csrf_token %}   
+            <tr> <th> {{ game.current_map.name }} </th> <th> {{ game.player_set.count }} / {{ game.num_players }} </th> <th> {{ game.time_per_move }} </th> 
+                <th> <input type="submit" class="btn btn-default" name="join" value="join"/> <th>
+                <input type="hidden" name="j" id="j" value="{{game.pk}}">
+            </tr>
+        </form>
+    {% endfor %}
+</table>
 
 
 </body>
+<script>
+function drawMap() {
+    var e = document.getElementById("map");
+    var opt = e.options[e.selectedIndex].id;
+    var pic = document.getElementById("mapPic")
+    var width = pic.width;
+    var height = pic.height;
+    pic.src = "/static/lolturbine/maps/" + opt;
+    pic.height = height;
+}
+</script>
+
 </html>

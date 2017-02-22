@@ -2,7 +2,7 @@ from django.shortcuts import render
 
 # Create your views here.
 
-from .models import OngoingGame,TopographicalDescription,Nation,Continent,Player,NationInGame,Comment,PlayerStats
+from .models import OngoingGame,TopographicalDescription,Nation,Continent,Player,NationInGame,Comment,PlayerStats, gameLog
 from random import randint#, shuffle
 from math import floor
 from django.contrib.messages import get_messages
@@ -12,6 +12,7 @@ from django.core.urlresolvers import reverse
 from django.core import serializers
 import simplejson as json
 import math,random
+import xmltodict
 
 from django.contrib.auth.decorators import login_required
 
@@ -25,35 +26,41 @@ def getMessage(request):
     for message in storage:
         return message
 
-def addNations(request,m):
+def addNations(r,nations,m):
+    index = "Error in first nation"
     try:
         i = 0
-        while (True):
-            name = request.POST[str(i) + "name"]
-            border = request.POST[str(i) + "border"]
-            x = int(request.POST[str(i) + "x"])
-            y = int(request.POST[str(i) + "y"])
+        for nation in nations:
+            index = int(nation["index"])
+            name = nation["name"]
+            border = nation["border"]
+            x = int(nation["x"])
+            y = int(nation["y"])
             n = Nation(name = name,topographical_description = m, border = border, index = i, x = x, y = y)
             n.save()
             i += 1
     except: 
-        # not really checking for anything...
-        a = 2
+        # An error occured for some reason..
+        text = "Error occured while adding nations with index" + str(index) 
+        messages.add_message(request, messages.INFO, text)
+        return HttpResponseRedirect(reverse('lolturbine:addMap'))
     return i
 
-def addContinents(request,m):
+def addContinents(r,continents,m):
+    name = "Error in first continent"
     try:
         i = 0
-        while (True):
-            name = request.POST["c" + str(i) + "name"]
-            nations = request.POST["c" + str(i) + "nations"]
-            bonus = int(request.POST["c" + str(i) + "bonus"])
+        for continent in continents:
+            name = continent["name"]
+            nations = continent["nations"]
+            bonus = continent["bonus"]
             c = Continent(bonus = bonus, topographical_description = m, name = name, nations = nations )
             c.save()
             i += 1
     except: 
-        # not really checking for anything...
-        a = 2
+        text = "Error occured while adding continent with name:" + name
+        messages.add_message(request, messages.INFO, text)
+        return HttpResponseRedirect(reverse('lolturbine:addMap'))
     return i
 
 @login_required
@@ -63,10 +70,13 @@ def addMap(request):
         ################ Create new map ########################
         name = request.POST.get("map_name")
         image = request.POST.get("imageLoader")
-        m = TopographicalDescription(name = name, image = image, created_by = request.user )
+        d = xmltodict.parse(request.POST.get("textField"))
+        m = TopographicalDescription(name = name, image = image, created_by = request.user,refrence = request.POST.get("textField")  )
         m.save()
-        n = addNations(request,m)
-        c = addContinents(request,m)
+
+    
+        n = addNations(request,d["map"]["nations"]["nation"],m)
+        c = addContinents(request,d["map"]["continents"]["continent"],m)
         text = "Map added with %i nations and %i continents." % (n,c)
         messages.add_message(request, messages.INFO, text)
         return HttpResponseRedirect(reverse('lolturbine:addMap'))
@@ -201,6 +211,7 @@ def game(request,pk):
     users = [player.user.username for player in players]
     #print(users)
     current_map = TopographicalDescription.objects.filter(name = game[0].current_map.name)
+    gl = gameLog.objects.filter(game = game)
 #    users = User.objects.filter(game = game)
 
     ######################Makes the information avilable to json#######################
@@ -211,6 +222,7 @@ def game(request,pk):
     current_map = serializers.serialize('json', current_map)
     players = serializers.serialize('json', players)
     current_player = serializers.serialize('json', current_player)
+    gl = serializers.serialize('json', gl)
     users = json.dumps(users)
 
 
@@ -227,6 +239,7 @@ def game(request,pk):
         'comments' : comments,
         'text' : getMessage(request),
         'current_player' : current_player,
+        'gameLog' : gl,
         'users' : users,
 
 #        'current_player' : 
@@ -338,7 +351,7 @@ def index(request):
             m = request.POST["map"]
             m = TopographicalDescription.objects.get(name=m)
             num_players = int(request.POST["num_players"])
-            time_limit = int(request.POST["time_limit"])*60
+            time_limit = (request.POST["time_limit"])
             
             o = OngoingGame(current_map = m, time_per_move = time_limit,num_players = num_players)
             o.save()
@@ -355,7 +368,7 @@ def index(request):
 
 
     context['text'] = getMessage(request)
-
+    print(context)
     return render(request, 'lolturbine/index.html',context = context)
 
 @login_required
@@ -365,14 +378,16 @@ def place_troops(request,pk,n):
     user = request.user
     game = OngoingGame.objects.get(pk = int(pk))
     player = Player.objects.get(game = game, user = user)
-    nation = Nation.objects.get(index = int(n), topographical_description = game.current_map)
-    nation = NationInGame.objects.get(ongoing_game = game, area = nation)
+    nation1 = Nation.objects.get(index = int(n), topographical_description = game.current_map)
+    nation = NationInGame.objects.get(ongoing_game = game, area = nation1)
 
     if player.nTroops > 0 and nation.owner == player: 
         nation.troops += 1
         nation.save()
         player.nTroops -= 1
         player.save()
+        g = gameLog(stage = 1, game = game, nation1_index = nation1.index, player1_color = player.color, change_nation1_troops = 1)
+        g.save()
         a = 1
     return HttpResponse(a)
 
@@ -385,11 +400,11 @@ def attack(request,pk,a,v):
     game = OngoingGame.objects.get(pk = int(pk))
     player = Player.objects.get(game = game, user = user)
 
-    attack = Nation.objects.get(index = int(a), topographical_description = game.current_map)
-    victim = Nation.objects.get(index = int(v), topographical_description = game.current_map)
+    attack1 = Nation.objects.get(index = int(a), topographical_description = game.current_map)
+    victim1 = Nation.objects.get(index = int(v), topographical_description = game.current_map)
 
-    attack = NationInGame.objects.get(ongoing_game = game, area = attack)
-    victim = NationInGame.objects.get(ongoing_game = game, area = victim)
+    attack = NationInGame.objects.get(ongoing_game = game, area = attack1)
+    victim = NationInGame.objects.get(ongoing_game = game, area = victim1)
     defender = Player.objects.get(game = game, user = victim.owner.user)
     adice = []
     vdice = []
@@ -398,6 +413,8 @@ def attack(request,pk,a,v):
         player.stage = 2
         player.save()
         random.seed()
+        aTroops = 0
+        vTroops = 0
         for i in range(min(3,attack.troops-1)):
             adice.append(random.randint(1, 6))
         for j in range(min(2,victim.troops)):
@@ -406,17 +423,32 @@ def attack(request,pk,a,v):
         vdice.sort(reverse = True)
         if adice[0] > vdice[0]:
             victim.troops -= 1
-        else:
+            vTroops -= 1
+            #g = gameLog(stage = 2, game = game, fromIndex = victim.index, currentPlayer = player, troops = -1)
+            #g.save()
+        else:            
             attack.troops -= 1
+            aTroops -= 1
+            #g = gameLog(stage = 2, game = game, toIndex = attack.index, currentPlayer = player, troops = -1)
+            #g.save()
         if len(adice) > 1 and len(vdice) > 1:   
             if adice[1] > vdice[1]:
                 victim.troops -= 1
+                vTroops -= 1
+                #g = gameLog(stage = 2, game = game, fromIndex = victim.index, currentPlayer = player, troops = -1)
+                #g.save()
             else:
                 attack.troops -= 1
+                aTroops -= 1
+                #g = gameLog(stage = 2, game = game, toIndex = attack.index, currentPlayer = player, troops = -1)
+                #g.save()
         if victim.troops == 0:
             victim.owner = player
             victim.troops = 1
-            attack.troops -= 1 
+            attack.troops -= 1
+            aTroops -= 1
+            #g = gameLog(stage = 2, game = game, toIndex = victim.index, fromIndex = attack.index, currentPlayer = player)
+            #g.save()
             v = NationInGame.objects.filter(ongoing_game = game, owner = defender)
             a = NationInGame.objects.filter(ongoing_game = game, owner = player)
             al = NationInGame.objects.filter(ongoing_game = game)
@@ -427,7 +459,9 @@ def attack(request,pk,a,v):
             ################Sjekk om denne spilleren har tapt!######################
         attack.save()
         victim.save()
-
+        #####Her skal jeg oppdatere gameLog
+        g = gameLog(stage = 2, game = game, nation1_index = attack1.index, nation2_index = victim1.index, player1_color = player.color, player2_color = defender.color, change_nation1_troops = aTroops, change_nation2_troops = vTroops)
+        g.save()
     aa = 1
     d = json.dumps([aa,adice,vdice])
     return HttpResponse(d)
@@ -453,7 +487,7 @@ def blob(game,f,t, player):
     return 0
 
 @login_required
-def move_forces(request,pk,f,t):
+def move_forces(request,pk,f,t,stage):
     a = 0
     game = OngoingGame.objects.get(pk = int(pk))
     player = Player.objects.get(game = game, user = request.user)
@@ -466,18 +500,20 @@ def move_forces(request,pk,f,t):
         to.troops += 1
         fo.save()
         to.save()
+        g = gameLog(stage = stage, game = game, nation1_index = to.area.index, nation2_index = fo.area.index, player1_color = player.color, change_nation1_troops = 1, change_nation2_troops = -1 )
+        g.save()
         a = 1
     return a
 
 
 @login_required
 def reinforce_battle(request,pk,f,t):
-    a = move_forces(request,pk,f,t)
+    a = move_forces(request,pk,f,t,2)
     return HttpResponse(a)
 
 @login_required
 def reinforce(request,pk,f,t):
-    a = move_forces(request,pk,f,t)
+    a = move_forces(request,pk,f,t,3)
     game = OngoingGame.objects.get(pk = int(pk))
     player = Player.objects.get(game = game, user = request.user)
     player.stage = 3

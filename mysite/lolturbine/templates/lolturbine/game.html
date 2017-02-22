@@ -5,7 +5,7 @@
  <!-- <script src="{% static 'lolturbine/js/lolturbine.js' %}"></script> -->
         <script>window.jQuery || document.write('<script src={% static "js/jquery-3.1.1.min.js"%}  ><\/script>')</script>
 </head>
-<body onload="startGame( {{ game }}, {{ nations_in_game }}, {{ continents }}, {{ nations }}, {{ current_map }}, {{ players }}, {{ current_player }}, {{ users }} )">
+<body onload="startGame( {{ game }}, {{ nations_in_game }}, {{ continents }}, {{ nations }}, {{ current_map }}, {{ players }}, {{ current_player }}, {{ users }},{{ gameLog }} )">
 
 <a href={% url 'lolturbine:index' %} > return to page </a>
 {% if text %}
@@ -67,7 +67,7 @@ if (ppp.stage < 4 && ppp.stage > 0) {
 }
 
 
-function startGame(g,nig,c,n,m,p,cp,u) {
+function startGame(g,nig,c,n,m,p,cp,u,gl) {
 
 console.log("g")
 console.log(g)
@@ -85,6 +85,7 @@ console.log("cp")
 console.log(cp)    
 console.log("u")
 console.log(u)
+console.log(gl)
 pk = g[0].pk
 continents = c;
 players = p;
